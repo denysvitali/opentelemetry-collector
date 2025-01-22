@@ -25,10 +25,10 @@ func TestReadScope(t *testing.T) {
 	"name": "name_value",
 	"version": "version_value"
 }`,
-			want: &otlpcommon.InstrumentationScope{
+			want: otlpcommon.InstrumentationScope_builder{
 				Name:    "name_value",
 				Version: "version_value",
-			},
+			}.Build(),
 		},
 		{
 			name: "with attributes",
@@ -55,45 +55,37 @@ func TestReadScope(t *testing.T) {
 	],
 	"dropped_attributes_count": 1
 }`,
-			want: &otlpcommon.InstrumentationScope{
+			want: otlpcommon.InstrumentationScope_builder{
 				Name:    "my_name",
 				Version: "my_version",
-				Attributes: []otlpcommon.KeyValue{
-					{
+				Attributes: []*otlpcommon.KeyValue{
+					otlpcommon.KeyValue_builder{
 						Key: "string_key",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_StringValue{
-								StringValue: "value",
-							},
-						},
-					},
-					{
+						Value: otlpcommon.AnyValue_builder{
+							StringValue: ref("value"),
+						}.Build(),
+					}.Build(),
+					otlpcommon.KeyValue_builder{
 						Key: "bool_key",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_BoolValue{
-								BoolValue: true,
-							},
-						},
-					},
-					{
+						Value: otlpcommon.AnyValue_builder{
+							BoolValue: ref(true),
+						}.Build(),
+					}.Build(),
+					otlpcommon.KeyValue_builder{
 						Key: "int_key",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_IntValue{
-								IntValue: 314,
-							},
-						},
-					},
-					{
+						Value: otlpcommon.AnyValue_builder{
+							IntValue: ref(int64(314)),
+						}.Build(),
+					}.Build(),
+					otlpcommon.KeyValue_builder{
 						Key: "double_key",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_DoubleValue{
-								DoubleValue: 3.14,
-							},
-						},
-					},
+						Value: otlpcommon.AnyValue_builder{
+							DoubleValue: ref(3.14),
+						}.Build(),
+					}.Build(),
 				},
 				DroppedAttributesCount: 1,
-			},
+			}.Build(),
 		},
 		{
 			name: "unknown field",
@@ -101,9 +93,9 @@ func TestReadScope(t *testing.T) {
 	"name": "name_value",
 	"unknown": "version"
 }`,
-			want: &otlpcommon.InstrumentationScope{
+			want: otlpcommon.InstrumentationScope_builder{
 				Name: "name_value",
-			},
+			}.Build(),
 		},
 	}
 	for _, tt := range tests {

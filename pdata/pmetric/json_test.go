@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,8 +84,8 @@ var metricsSumOTLPFull = func() Metrics {
 	exemplar := datapoint.Exemplars().AppendEmpty()
 	exemplar.SetDoubleValue(99.3)
 	exemplar.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-	traceID := pcommon.TraceID([16]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
-	spanID := pcommon.SpanID([8]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
+	traceID := pcommon.TraceID([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
+	spanID := pcommon.SpanID([]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
 	exemplar.SetSpanID(spanID)
 	exemplar.SetTraceID(traceID)
 	exemplar.FilteredAttributes().PutStr("service.name", "testService")
@@ -121,8 +123,8 @@ var metricsGaugeOTLPFull = func() Metrics {
 	exemplar := datapoint.Exemplars().AppendEmpty()
 	exemplar.SetDoubleValue(99.3)
 	exemplar.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-	traceID := pcommon.TraceID([16]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
-	spanID := pcommon.SpanID([8]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
+	traceID := pcommon.TraceID([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
+	spanID := pcommon.SpanID([]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
 	exemplar.SetSpanID(spanID)
 	exemplar.SetTraceID(traceID)
 	exemplar.FilteredAttributes().PutStr("service.name", "testService")
@@ -165,8 +167,8 @@ var metricsHistogramOTLPFull = func() Metrics {
 	exemplar.SetDoubleValue(99.3)
 	exemplar.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 	datapoint.SetMin(float64(time.Now().Unix()))
-	traceID := pcommon.TraceID([16]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
-	spanID := pcommon.SpanID([8]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
+	traceID := pcommon.TraceID([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
+	spanID := pcommon.SpanID([]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
 	exemplar.SetSpanID(spanID)
 	exemplar.SetTraceID(traceID)
 	exemplar.FilteredAttributes().PutStr("service.name", "testService")
@@ -211,8 +213,8 @@ var metricsExponentialHistogramOTLPFull = func() Metrics {
 	exemplar.SetDoubleValue(99.3)
 	exemplar.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 	datapoint.SetMin(float64(time.Now().Unix()))
-	traceID := pcommon.TraceID([16]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
-	spanID := pcommon.SpanID([8]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
+	traceID := pcommon.TraceID([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10})
+	spanID := pcommon.SpanID([]byte{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18})
 	exemplar.SetSpanID(spanID)
 	exemplar.SetTraceID(traceID)
 	exemplar.FilteredAttributes().PutStr("service.name", "testService")
@@ -329,7 +331,7 @@ func TestUnmarshalJsoniterResourceMetrics(t *testing.T) {
 	val := NewResourceMetrics()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.ResourceMetrics{SchemaUrl: "schema"}, val.orig)
+	assert.EqualValues(t, otlpmetrics.ResourceMetrics_builder{SchemaUrl: "schema"}.Build(), val.orig)
 }
 
 func TestUnmarshalJsoniterScopeMetrics(t *testing.T) {
@@ -339,7 +341,7 @@ func TestUnmarshalJsoniterScopeMetrics(t *testing.T) {
 	val := NewScopeMetrics()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.ScopeMetrics{SchemaUrl: "schema"}, val.orig)
+	assert.EqualValues(t, otlpmetrics.ScopeMetrics_builder{SchemaUrl: "schema"}.Build(), val.orig)
 }
 
 func TestUnmarshalJsoniterMetric(t *testing.T) {
@@ -355,54 +357,44 @@ func TestUnmarshalJsoniterMetric(t *testing.T) {
 			name: "sum has unknown field",
 			args: args{
 				jsonStr: `{"sum":{"extra":""}}`,
-				want: &otlpmetrics.Metric{
-					Data: &otlpmetrics.Metric_Sum{
-						Sum: &otlpmetrics.Sum{},
-					},
-				},
+				want: otlpmetrics.Metric_builder{
+					Sum: &otlpmetrics.Sum{},
+				}.Build(),
 			},
 		},
 		{
 			name: "gauge has unknown field",
 			args: args{
-				want: &otlpmetrics.Metric{
-					Data: &otlpmetrics.Metric_Gauge{
-						Gauge: &otlpmetrics.Gauge{},
-					},
-				},
+				want: otlpmetrics.Metric_builder{
+					Gauge: &otlpmetrics.Gauge{},
+				}.Build(),
 				jsonStr: `{"gauge":{"extra":""}}`,
 			},
 		},
 		{
 			name: "histogram has unknown field",
 			args: args{
-				want: &otlpmetrics.Metric{
-					Data: &otlpmetrics.Metric_Histogram{
-						Histogram: &otlpmetrics.Histogram{},
-					},
-				},
+				want: otlpmetrics.Metric_builder{
+					Histogram: &otlpmetrics.Histogram{},
+				}.Build(),
 				jsonStr: `{"histogram":{"extra":""}}`,
 			},
 		},
 		{
 			name: "exponential_histogram has unknown field",
 			args: args{
-				want: &otlpmetrics.Metric{
-					Data: &otlpmetrics.Metric_ExponentialHistogram{
-						ExponentialHistogram: &otlpmetrics.ExponentialHistogram{},
-					},
-				},
+				want: otlpmetrics.Metric_builder{
+					ExponentialHistogram: &otlpmetrics.ExponentialHistogram{},
+				}.Build(),
 				jsonStr: `{"exponential_histogram":{"extra":""}}`,
 			},
 		},
 		{
 			name: "Summary has unknown field",
 			args: args{
-				want: &otlpmetrics.Metric{
-					Data: &otlpmetrics.Metric_Summary{
-						Summary: &otlpmetrics.Summary{},
-					},
-				},
+				want: otlpmetrics.Metric_builder{
+					Summary: &otlpmetrics.Summary{},
+				}.Build(),
 				jsonStr: `{"summary":{"extra":""}}`,
 			},
 		},
@@ -441,7 +433,7 @@ func TestUnmarshalJsoniterHistogramDataPoint(t *testing.T) {
 	val := NewHistogramDataPoint()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.HistogramDataPoint{Count: 3}, val.orig)
+	assert.EqualValues(t, otlpmetrics.HistogramDataPoint_builder{Count: 3}.Build(), val.orig)
 }
 
 func TestUnmarshalJsoniterExponentialHistogramDataPoint(t *testing.T) {
@@ -451,7 +443,7 @@ func TestUnmarshalJsoniterExponentialHistogramDataPoint(t *testing.T) {
 	val := NewExponentialHistogramDataPoint()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.ExponentialHistogramDataPoint{Count: 3}, val.orig)
+	assert.EqualValues(t, otlpmetrics.ExponentialHistogramDataPoint_builder{Count: 3}.Build(), val.orig)
 }
 
 func TestUnmarshalJsoniterExponentialHistogramDataPointBuckets(t *testing.T) {
@@ -461,7 +453,10 @@ func TestUnmarshalJsoniterExponentialHistogramDataPointBuckets(t *testing.T) {
 	val := NewExponentialHistogramDataPointBuckets()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.ExponentialHistogramDataPoint_Buckets{Offset: 3, BucketCounts: []uint64{1, 2}}, val.orig)
+	assert.EqualValues(t,
+		otlpmetrics.ExponentialHistogramDataPoint_Buckets_builder{Offset: 3, BucketCounts: []uint64{1, 2}}.Build(),
+		val.orig,
+	)
 }
 
 func TestUnmarshalJsoniterSummaryDataPoint(t *testing.T) {
@@ -471,10 +466,13 @@ func TestUnmarshalJsoniterSummaryDataPoint(t *testing.T) {
 	val := NewSummaryDataPoint()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.SummaryDataPoint{
-		Count: 3,
-		Sum:   3.14,
-	}, val.orig)
+	assert.EqualValues(t,
+		otlpmetrics.SummaryDataPoint_builder{
+			Count: 3,
+			Sum:   3.14,
+		}.Build(),
+		val.orig,
+	)
 }
 
 func TestUnmarshalJsoniterQuantileValue(t *testing.T) {
@@ -484,10 +482,10 @@ func TestUnmarshalJsoniterQuantileValue(t *testing.T) {
 	val := NewSummaryDataPointValueAtQuantile()
 	val.unmarshalJsoniter(iter)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpmetrics.SummaryDataPoint_ValueAtQuantile{
+	assert.EqualValues(t, otlpmetrics.SummaryDataPoint_ValueAtQuantile_builder{
 		Quantile: 0.314,
 		Value:    3,
-	}, val.orig)
+	}.Build(), val.orig)
 }
 
 func TestExemplarVal(t *testing.T) {
@@ -499,20 +497,16 @@ func TestExemplarVal(t *testing.T) {
 		{
 			name:    "int",
 			jsonStr: `{"asInt":1}`,
-			want: &otlpmetrics.Exemplar{
-				Value: &otlpmetrics.Exemplar_AsInt{
-					AsInt: 1,
-				},
-			},
+			want: otlpmetrics.Exemplar_builder{
+				AsInt: utils.Ref(int64(1)),
+			}.Build(),
 		},
 		{
 			name:    "double",
 			jsonStr: `{"asDouble":3.14}`,
-			want: &otlpmetrics.Exemplar{
-				Value: &otlpmetrics.Exemplar_AsDouble{
-					AsDouble: 3.14,
-				},
-			},
+			want: otlpmetrics.Exemplar_builder{
+				AsDouble: utils.Ref(3.14),
+			}.Build(),
 		},
 	}
 	for _, tt := range tests {

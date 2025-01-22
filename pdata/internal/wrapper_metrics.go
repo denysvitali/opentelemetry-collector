@@ -30,17 +30,18 @@ func NewMetrics(orig *otlpcollectormetrics.ExportMetricsServiceRequest, state *S
 }
 
 // MetricsToProto internal helper to convert Metrics to protobuf representation.
-func MetricsToProto(l Metrics) otlpmetrics.MetricsData {
-	return otlpmetrics.MetricsData{
-		ResourceMetrics: l.orig.ResourceMetrics,
-	}
+func MetricsToProto(l Metrics) *otlpmetrics.MetricsData {
+	return otlpmetrics.MetricsData_builder{
+		ResourceMetrics: l.orig.GetResourceMetrics(),
+	}.Build()
 }
 
 // MetricsFromProto internal helper to convert protobuf representation to Metrics.
 // This function set exclusive state assuming that it's called only once per Metrics.
-func MetricsFromProto(orig otlpmetrics.MetricsData) Metrics {
+func MetricsFromProto(orig *otlpmetrics.MetricsData) Metrics {
 	state := StateMutable
-	return NewMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
-		ResourceMetrics: orig.ResourceMetrics,
-	}, &state)
+	return NewMetrics(
+		otlpcollectormetrics.ExportMetricsServiceRequest_builder{
+			ResourceMetrics: orig.GetResourceMetrics(),
+		}.Build(), &state)
 }

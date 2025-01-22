@@ -190,9 +190,9 @@ PROTO_PACKAGE=go.opentelemetry.io/collector/$(PROTO_TARGET_GEN_DIR)
 PROTO_INTERMEDIATE_DIR=pdata/internal/.patched-otlp-proto
 
 DOCKERCMD ?= docker
-DOCKER_PROTOBUF ?= otel/build-protobuf:0.23.0
+DOCKER_PROTOBUF ?= otel/build-protobuf:0.25.0
 PROTOC := $(DOCKERCMD) run --rm -u ${shell id -u} -v${PWD}:${PWD} -w${PWD}/$(PROTO_INTERMEDIATE_DIR) ${DOCKER_PROTOBUF} --proto_path=${PWD}
-PROTO_INCLUDES := -I/usr/include/github.com/gogo/protobuf -I./
+PROTO_INCLUDES := -I./
 
 # Cleanup temporary directory
 genproto-cleanup:
@@ -232,7 +232,7 @@ genproto_sub:
 
 
 	@echo Generate Go code from .proto files in intermediate directory.
-	$(foreach file,$(OPENTELEMETRY_PROTO_FILES),$(call exec-command,$(PROTOC) $(PROTO_INCLUDES) --gogofaster_out=plugins=grpc:./ $(file)))
+	$(foreach file,$(OPENTELEMETRY_PROTO_FILES),$(call exec-command,$(PROTOC) $(PROTO_INCLUDES) --plugin=/root/.nix-profile/bin/protoc-gen-go --go_opt=default_api_level=API_OPAQUE --go_out=./ --go-grpc_out=./ $(file)))
 
 	@echo Move generated code to target directory.
 	mkdir -p $(PROTO_TARGET_GEN_DIR)

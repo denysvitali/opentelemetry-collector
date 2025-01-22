@@ -16,7 +16,7 @@ func TestSlice(t *testing.T) {
 	es := NewSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSlice(&[]otlpcommon.AnyValue{}, &state)
+	es = newSlice(&[]*otlpcommon.AnyValue{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	es.EnsureCapacity(7)
@@ -33,7 +33,9 @@ func TestSlice(t *testing.T) {
 
 func TestSliceReadOnly(t *testing.T) {
 	state := internal.StateReadOnly
-	es := newSlice(&[]otlpcommon.AnyValue{{Value: &otlpcommon.AnyValue_IntValue{IntValue: 3}}}, &state)
+	es := newSlice(&[]*otlpcommon.AnyValue{
+		otlpcommon.AnyValue_builder{IntValue: ref(int64(3))}.Build(),
+	}, &state)
 
 	assert.Equal(t, 1, es.Len())
 	assert.Equal(t, int64(3), es.At(0).Int())

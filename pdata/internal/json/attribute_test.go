@@ -13,6 +13,10 @@ import (
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 )
 
+func ref[T any](v T) *T {
+	return &v
+}
+
 func TestReadArray(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -24,17 +28,16 @@ func TestReadArray(t *testing.T) {
 			jsonStr: `{"values":[{
 "stringValue":"12312"
 }]}`,
-			want: &otlpcommon.ArrayValue{
-				Values: []otlpcommon.AnyValue{
-					{
-						Value: &otlpcommon.AnyValue_StringValue{
-							StringValue: "12312",
-						},
-					},
+			want: otlpcommon.ArrayValue_builder{
+				Values: []*otlpcommon.AnyValue{
+					otlpcommon.AnyValue_builder{
+						StringValue: ref("12312"),
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			iter := jsoniter.ConfigFastest.BorrowIterator([]byte(tt.jsonStr))
@@ -59,18 +62,16 @@ func TestReadKvlistValue(t *testing.T) {
 "stringValue": "testValue"
 }
 }]}`,
-			want: &otlpcommon.KeyValueList{
-				Values: []otlpcommon.KeyValue{
-					{
+			want: otlpcommon.KeyValueList_builder{
+				Values: []*otlpcommon.KeyValue{
+					otlpcommon.KeyValue_builder{
 						Key: "testKey",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_StringValue{
-								StringValue: "testValue",
-							},
-						},
-					},
+						Value: otlpcommon.AnyValue_builder{
+							StringValue: ref("testValue"),
+						}.Build(),
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 		{
 			name: "boolValue",
@@ -80,18 +81,16 @@ func TestReadKvlistValue(t *testing.T) {
 "boolValue": true
 }
 }]}`,
-			want: &otlpcommon.KeyValueList{
-				Values: []otlpcommon.KeyValue{
-					{
+			want: otlpcommon.KeyValueList_builder{
+				Values: []*otlpcommon.KeyValue{
+					otlpcommon.KeyValue_builder{
 						Key: "testKey",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_BoolValue{
-								BoolValue: true,
-							},
-						},
-					},
+						Value: otlpcommon.AnyValue_builder{
+							BoolValue: ref(true),
+						}.Build(),
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 		{
 			name: "intValue",
@@ -101,18 +100,16 @@ func TestReadKvlistValue(t *testing.T) {
 "intValue": 1
 }
 }]}`,
-			want: &otlpcommon.KeyValueList{
-				Values: []otlpcommon.KeyValue{
-					{
+			want: otlpcommon.KeyValueList_builder{
+				Values: []*otlpcommon.KeyValue{
+					otlpcommon.KeyValue_builder{
 						Key: "testKey",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_IntValue{
-								IntValue: 1,
-							},
-						},
-					},
+						Value: otlpcommon.AnyValue_builder{
+							IntValue: ref(int64(1)),
+						}.Build(),
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 		{
 			name: "doubleValue",
@@ -122,18 +119,16 @@ func TestReadKvlistValue(t *testing.T) {
 "doubleValue": 1.3
 }
 }]}`,
-			want: &otlpcommon.KeyValueList{
-				Values: []otlpcommon.KeyValue{
-					{
+			want: otlpcommon.KeyValueList_builder{
+				Values: []*otlpcommon.KeyValue{
+					otlpcommon.KeyValue_builder{
 						Key: "testKey",
-						Value: otlpcommon.AnyValue{
-							Value: &otlpcommon.AnyValue_DoubleValue{
-								DoubleValue: 1.3,
-							},
-						},
-					},
+						Value: otlpcommon.AnyValue_builder{
+							DoubleValue: ref(1.3),
+						}.Build(),
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 	}
 	for _, tt := range tests {
@@ -164,7 +159,7 @@ func TestReadAttributeValueUnknownField(t *testing.T) {
 	value := ReadAttribute(iter)
 	//  unknown fields should not be an error
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, otlpcommon.KeyValue{Key: "test"}, value)
+	assert.EqualValues(t, otlpcommon.KeyValue_builder{Key: "test"}.Build(), value)
 }
 
 func TestReadValueUnknownField(t *testing.T) {
@@ -212,11 +207,9 @@ func TestReadArrayValueInvalidArrayValue(t *testing.T) {
 	value := &otlpcommon.AnyValue{}
 	ReadValue(iter, value)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpcommon.AnyValue{
-		Value: &otlpcommon.AnyValue_ArrayValue{
-			ArrayValue: &otlpcommon.ArrayValue{},
-		},
-	}, value)
+	assert.EqualValues(t, otlpcommon.AnyValue_builder{
+		ArrayValue: &otlpcommon.ArrayValue{},
+	}.Build(), value)
 }
 
 func TestReadKvlistValueInvalidArrayValue(t *testing.T) {
@@ -227,9 +220,7 @@ func TestReadKvlistValueInvalidArrayValue(t *testing.T) {
 	value := &otlpcommon.AnyValue{}
 	ReadValue(iter, value)
 	require.NoError(t, iter.Error)
-	assert.EqualValues(t, &otlpcommon.AnyValue{
-		Value: &otlpcommon.AnyValue_KvlistValue{
-			KvlistValue: &otlpcommon.KeyValueList{},
-		},
-	}, value)
+	assert.EqualValues(t, otlpcommon.AnyValue_builder{
+		KvlistValue: &otlpcommon.KeyValueList{},
+	}.Build(), value)
 }

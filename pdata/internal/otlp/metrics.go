@@ -11,9 +11,9 @@ import (
 // Any pmetric.Unmarshaler implementation from OTLP (proto/json) MUST call this, and the gRPC Server implementation.
 func MigrateMetrics(rms []*otlpmetrics.ResourceMetrics) {
 	for _, rm := range rms {
-		if len(rm.ScopeMetrics) == 0 {
-			rm.ScopeMetrics = rm.DeprecatedScopeMetrics
+		if len(rm.GetScopeMetrics()) == 0 {
+			rm.SetScopeMetrics(rm.GetDeprecatedScopeMetrics())
 		}
-		rm.DeprecatedScopeMetrics = nil
+		rm.SetDeprecatedScopeMetrics(nil)
 	}
 }

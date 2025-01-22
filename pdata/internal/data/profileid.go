@@ -18,7 +18,7 @@ var (
 
 // ProfileID is a custom data type that is used for all profile_id fields in OTLP
 // Protobuf messages.
-type ProfileID [profileIDSize]byte
+type ProfileID []byte
 
 var _ proto.Sizer = (*SpanID)(nil)
 
@@ -32,7 +32,7 @@ func (tid ProfileID) Size() int {
 
 // IsEmpty returns true if id contains at leas one non-zero byte.
 func (tid ProfileID) IsEmpty() bool {
-	return tid == [profileIDSize]byte{}
+	return len(tid) == 0
 }
 
 // MarshalTo converts profile ID into a binary representation. Called by Protobuf serialization.
@@ -51,15 +51,16 @@ func (tid ProfileID) MarshalTo(data []byte) (n int, err error) {
 // Unmarshal inflates this profile ID from binary representation. Called by Protobuf serialization.
 func (tid *ProfileID) Unmarshal(data []byte) error {
 	if len(data) == 0 {
-		*tid = [profileIDSize]byte{}
+		*tid = []byte{}
 		return nil
 	}
 
 	if len(data) != profileIDSize {
 		return errUnmarshalProfileID
 	}
+	*tid = make([]byte, profileIDSize)
 
-	copy(tid[:], data)
+	copy(*tid, data)
 	return nil
 }
 
@@ -74,6 +75,9 @@ func (tid ProfileID) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON inflates profile id from hex string, possibly enclosed in quotes.
 // Called by Protobuf JSON deserialization.
 func (tid *ProfileID) UnmarshalJSON(data []byte) error {
-	*tid = [profileIDSize]byte{}
-	return unmarshalJSON(tid[:], data)
+	*tid = make([]byte, profileIDSize)
+	if err := unmarshalJSON(*tid, data); err != nil {
+		return err
+	}
+	return nil
 }

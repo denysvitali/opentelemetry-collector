@@ -16,14 +16,14 @@ func GetTraceStateState(ms TraceState) *State {
 	return ms.state
 }
 
-func NewTraceState(orig *string, state *State) TraceState {
-	return TraceState{orig: orig, state: state}
+func NewTraceState(orig string, state *State) TraceState {
+	return TraceState{orig: &orig, state: state}
 }
 
 func GenerateTestTraceState() TraceState {
 	var orig string
 	state := StateMutable
-	ms := NewTraceState(&orig, &state)
+	ms := NewTraceState(orig, &state)
 	FillTestTraceState(ms)
 	return ms
 }

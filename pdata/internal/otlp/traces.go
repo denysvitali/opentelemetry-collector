@@ -11,9 +11,9 @@ import (
 // Any ptrace.Unmarshaler implementation from OTLP (proto/json) MUST call this, and the gRPC Server implementation.
 func MigrateTraces(rss []*otlptrace.ResourceSpans) {
 	for _, rs := range rss {
-		if len(rs.ScopeSpans) == 0 {
-			rs.ScopeSpans = rs.DeprecatedScopeSpans
+		if len(rs.GetScopeSpans()) == 0 {
+			rs.SetScopeSpans(rs.GetDeprecatedScopeSpans())
 		}
-		rs.DeprecatedScopeSpans = nil
+		rs.SetDeprecatedScopeSpans(nil)
 	}
 }

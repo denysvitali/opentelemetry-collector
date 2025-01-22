@@ -8,10 +8,10 @@ import (
 	"go.opentelemetry.io/collector/pdata/internal/data"
 )
 
-var emptySpanID = SpanID([8]byte{})
+var emptySpanID = SpanID([]byte{})
 
 // SpanID is span identifier.
-type SpanID [8]byte
+type SpanID []byte
 
 // NewSpanIDEmpty returns a new empty (all zero bytes) SpanID.
 func NewSpanIDEmpty() SpanID {

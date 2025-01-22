@@ -57,6 +57,12 @@ var mapStruct = &sliceOfPtrs{
 	packageName: "pcommon",
 }
 
+var attributesPtrs = &sliceOfPtrs{
+	structName:  "Map",
+	packageName: "pcommon",
+	element:     attribute,
+}
+
 var scopeField = &messageValueField{
 	fieldName:     "Scope",
 	returnMessage: scope,
@@ -95,7 +101,7 @@ var endTimeField = &primitiveTypedField{
 
 var attributes = &sliceField{
 	fieldName:   "Attributes",
-	returnSlice: mapStruct,
+	returnSlice: attributesPtrs,
 }
 
 var nameField = &primitiveField{
@@ -121,8 +127,8 @@ var traceIDType = &primitiveType{
 	structName:  "TraceID",
 	packageName: "pcommon",
 	rawType:     "data.TraceID",
-	defaultVal:  "data.TraceID([16]byte{})",
-	testVal:     "data.TraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})",
+	defaultVal:  "data.TraceID([]byte{})",
+	testVal:     "data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1})",
 }
 
 var spanIDField = &primitiveTypedField{
@@ -141,8 +147,8 @@ var spanIDType = &primitiveType{
 	structName:  "SpanID",
 	packageName: "pcommon",
 	rawType:     "data.SpanID",
-	defaultVal:  "data.SpanID([8]byte{})",
-	testVal:     "data.SpanID([8]byte{8, 7, 6, 5, 4, 3, 2, 1})",
+	defaultVal:  "data.SpanID([]byte{})",
+	testVal:     "data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1})",
 }
 
 var schemaURLField = &primitiveField{

@@ -13,16 +13,16 @@ func ReadScope(iter *jsoniter.Iterator, scope *otlpcommon.InstrumentationScope) 
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "name":
-			scope.Name = iter.ReadString()
+			scope.SetName(iter.ReadString())
 		case "version":
-			scope.Version = iter.ReadString()
+			scope.SetVersion(iter.ReadString())
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				scope.Attributes = append(scope.Attributes, ReadAttribute(iter))
+				scope.SetAttributes(append(scope.GetAttributes(), ReadAttribute(iter)))
 				return true
 			})
 		case "droppedAttributesCount", "dropped_attributes_count":
-			scope.DroppedAttributesCount = ReadUint32(iter)
+			scope.SetDroppedAttributesCount(ReadUint32(iter))
 		default:
 			iter.Skip()
 		}

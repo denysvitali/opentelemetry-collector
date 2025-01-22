@@ -30,17 +30,17 @@ func NewTraces(orig *otlpcollectortrace.ExportTraceServiceRequest, state *State)
 }
 
 // TracesToProto internal helper to convert Traces to protobuf representation.
-func TracesToProto(l Traces) otlptrace.TracesData {
-	return otlptrace.TracesData{
-		ResourceSpans: l.orig.ResourceSpans,
-	}
+func TracesToProto(l Traces) *otlptrace.TracesData {
+	td := &otlptrace.TracesData{}
+	td.SetResourceSpans(l.orig.GetResourceSpans())
+	return td
 }
 
 // TracesFromProto internal helper to convert protobuf representation to Traces.
 // This function set exclusive state assuming that it's called only once per Traces.
-func TracesFromProto(orig otlptrace.TracesData) Traces {
+func TracesFromProto(orig *otlptrace.TracesData) Traces {
 	state := StateMutable
-	return NewTraces(&otlpcollectortrace.ExportTraceServiceRequest{
-		ResourceSpans: orig.ResourceSpans,
-	}, &state)
+	etsr := &otlpcollectortrace.ExportTraceServiceRequest{}
+	etsr.SetResourceSpans(orig.GetResourceSpans())
+	return NewTraces(etsr, &state)
 }

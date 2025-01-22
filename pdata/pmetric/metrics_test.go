@@ -18,6 +18,7 @@ import (
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 const (
@@ -185,19 +186,19 @@ func TestHistogramWithValidSum(t *testing.T) {
 }
 
 func TestOtlpToInternalReadOnly(t *testing.T) {
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric(), generateTestProtoSumMetric(), generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	resourceMetrics := md.ResourceMetrics()
 	assert.EqualValues(t, 1, resourceMetrics.Len())
 
@@ -273,51 +274,51 @@ func TestOtlpToInternalReadOnly(t *testing.T) {
 }
 
 func TestOtlpToFromInternalReadOnly(t *testing.T) {
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric(), generateTestProtoSumMetric(), generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	// Test that nothing changed
-	assert.EqualValues(t, &otlpmetrics.MetricsData{
+	assert.EqualValues(t, otlpmetrics.MetricsData_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric(), generateTestProtoSumMetric(), generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}, md.getOrig())
+	}.Build(), md.getOrig())
 }
 
 func TestOtlpToFromInternalGaugeMutating(t *testing.T) {
 	newAttributes := map[string]any{"k": "v"}
 
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	resourceMetrics := md.ResourceMetrics()
 	metric := resourceMetrics.At(0).ScopeMetrics().At(0).Metrics().At(0)
 	// Mutate MetricDescriptor
@@ -344,62 +345,58 @@ func TestOtlpToFromInternalGaugeMutating(t *testing.T) {
 	assert.EqualValues(t, newAttributes, gaugeDataPoints.At(0).Attributes().AsRaw())
 
 	// Test that everything is updated.
-	assert.EqualValues(t, &otlpmetrics.MetricsData{
+	assert.EqualValues(t, otlpmetrics.MetricsData_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope: generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{
-							{
+							otlpmetrics.Metric_builder{
 								Name:        "new_my_metric_int",
 								Description: "My new metric",
 								Unit:        "1",
-								Data: &otlpmetrics.Metric_Gauge{
-									Gauge: &otlpmetrics.Gauge{
-										DataPoints: []*otlpmetrics.NumberDataPoint{
-											{
-												Attributes: []otlpcommon.KeyValue{
-													{
-														Key:   "k",
-														Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v"}},
-													},
-												},
-												StartTimeUnixNano: startTime + 1,
-												TimeUnixNano:      endTime + 1,
-												Value: &otlpmetrics.NumberDataPoint_AsDouble{
-													AsDouble: 124.1,
-												},
+								Gauge: otlpmetrics.Gauge_builder{
+									DataPoints: []*otlpmetrics.NumberDataPoint{
+										otlpmetrics.NumberDataPoint_builder{
+											Attributes: []*otlpcommon.KeyValue{
+												otlpcommon.KeyValue_builder{
+													Key:   "k",
+													Value: otlpcommon.AnyValue_builder{StringValue: utils.Ref("v")}.Build(),
+												}.Build(),
 											},
-										},
+											StartTimeUnixNano: startTime + 1,
+											TimeUnixNano:      endTime + 1,
+											AsDouble:          utils.Ref(124.1),
+										}.Build(),
 									},
-								},
-							},
+								}.Build(),
+							}.Build(),
 						},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}, md.getOrig())
+	}.Build(), md.getOrig())
 }
 
 func TestOtlpToFromInternalSumMutating(t *testing.T) {
 	newAttributes := map[string]any{"k": "v"}
 
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoSumMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	resourceMetrics := md.ResourceMetrics()
 	metric := resourceMetrics.At(0).ScopeMetrics().At(0).Metrics().At(0)
 	// Mutate MetricDescriptor
@@ -427,43 +424,39 @@ func TestOtlpToFromInternalSumMutating(t *testing.T) {
 	assert.EqualValues(t, newAttributes, doubleDataPoints.At(0).Attributes().AsRaw())
 
 	// Test that everything is updated.
-	assert.EqualValues(t, &otlpmetrics.MetricsData{
+	assert.EqualValues(t, otlpmetrics.MetricsData_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope: generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{
-							{
+							otlpmetrics.Metric_builder{
 								Name:        "new_my_metric_double",
 								Description: "My new metric",
 								Unit:        "1",
-								Data: &otlpmetrics.Metric_Sum{
-									Sum: &otlpmetrics.Sum{
-										AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-										DataPoints: []*otlpmetrics.NumberDataPoint{
-											{
-												Attributes: []otlpcommon.KeyValue{
-													{
-														Key:   "k",
-														Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v"}},
-													},
-												},
-												StartTimeUnixNano: startTime + 1,
-												TimeUnixNano:      endTime + 1,
-												Value: &otlpmetrics.NumberDataPoint_AsDouble{
-													AsDouble: 124.1,
-												},
+								Sum: otlpmetrics.Sum_builder{
+									AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+									DataPoints: []*otlpmetrics.NumberDataPoint{
+										otlpmetrics.NumberDataPoint_builder{
+											Attributes: []*otlpcommon.KeyValue{
+												otlpcommon.KeyValue_builder{
+													Key:   "k",
+													Value: otlpcommon.AnyValue_builder{StringValue: utils.Ref("v")}.Build(),
+												}.Build(),
 											},
-										},
+											StartTimeUnixNano: startTime + 1,
+											TimeUnixNano:      endTime + 1,
+											AsDouble:          utils.Ref(124.1),
+										}.Build(),
 									},
-								},
-							},
+								}.Build(),
+							}.Build(),
 						},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
 	}, md.getOrig())
 }
@@ -471,19 +464,19 @@ func TestOtlpToFromInternalSumMutating(t *testing.T) {
 func TestOtlpToFromInternalHistogramMutating(t *testing.T) {
 	newAttributes := map[string]any{"k": "v"}
 
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	resourceMetrics := md.ResourceMetrics()
 	metric := resourceMetrics.At(0).ScopeMetrics().At(0).Metrics().At(0)
 	// Mutate MetricDescriptor
@@ -511,62 +504,60 @@ func TestOtlpToFromInternalHistogramMutating(t *testing.T) {
 	assert.EqualValues(t, []float64{1}, histogramDataPoints.At(0).ExplicitBounds().AsRaw())
 	histogramDataPoints.At(0).BucketCounts().FromRaw([]uint64{21, 32})
 	// Test that everything is updated.
-	assert.EqualValues(t, &otlpmetrics.MetricsData{
+	assert.EqualValues(t, otlpmetrics.MetricsData_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope: generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{
-							{
+							otlpmetrics.Metric_builder{
 								Name:        "new_my_metric_histogram",
 								Description: "My new metric",
 								Unit:        "1",
-								Data: &otlpmetrics.Metric_Histogram{
-									Histogram: &otlpmetrics.Histogram{
-										AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-										DataPoints: []*otlpmetrics.HistogramDataPoint{
-											{
-												Attributes: []otlpcommon.KeyValue{
-													{
-														Key:   "k",
-														Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v"}},
-													},
-												},
-												StartTimeUnixNano: startTime + 1,
-												TimeUnixNano:      endTime + 1,
-												BucketCounts:      []uint64{21, 32},
-												ExplicitBounds:    []float64{1},
+								Histogram: otlpmetrics.Histogram_builder{
+									AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+									DataPoints: []*otlpmetrics.HistogramDataPoint{
+										otlpmetrics.HistogramDataPoint_builder{
+											Attributes: []*otlpcommon.KeyValue{
+												otlpcommon.KeyValue_builder{
+													Key:   "k",
+													Value: otlpcommon.AnyValue_builder{StringValue: utils.Ref("v")}.Build(),
+												}.Build(),
 											},
-										},
+											StartTimeUnixNano: startTime + 1,
+											TimeUnixNano:      endTime + 1,
+											BucketCounts:      []uint64{21, 32},
+											ExplicitBounds:    []float64{1},
+										}.Build(),
 									},
-								},
-							},
+								}.Build(),
+							}.Build(),
 						},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}, md.getOrig())
+	}.Build(), md.getOrig())
 }
 
 func TestOtlpToFromInternalExponentialHistogramMutating(t *testing.T) {
 	newAttributes := map[string]any{"k": "v"}
 
-	md := newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	md := newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 	resourceMetrics := md.ResourceMetrics()
 	metric := resourceMetrics.At(0).ScopeMetrics().At(0).Metrics().At(0)
 	// Mutate MetricDescriptor
@@ -591,42 +582,40 @@ func TestOtlpToFromInternalExponentialHistogramMutating(t *testing.T) {
 	histogramDataPoints.At(0).Attributes().PutStr("k", "v")
 	assert.EqualValues(t, newAttributes, histogramDataPoints.At(0).Attributes().AsRaw())
 	// Test that everything is updated.
-	assert.EqualValues(t, &otlpmetrics.MetricsData{
+	assert.EqualValues(t, otlpmetrics.MetricsData_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope: generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{
-							{
+							otlpmetrics.Metric_builder{
 								Name:        "new_my_metric_exponential_histogram",
 								Description: "My new metric",
 								Unit:        "1",
-								Data: &otlpmetrics.Metric_ExponentialHistogram{
-									ExponentialHistogram: &otlpmetrics.ExponentialHistogram{
-										AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-										DataPoints: []*otlpmetrics.ExponentialHistogramDataPoint{
-											{
-												Attributes: []otlpcommon.KeyValue{
-													{
-														Key:   "k",
-														Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v"}},
-													},
-												},
-												StartTimeUnixNano: startTime + 1,
-												TimeUnixNano:      endTime + 1,
+								ExponentialHistogram: otlpmetrics.ExponentialHistogram_builder{
+									AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+									DataPoints: []*otlpmetrics.ExponentialHistogramDataPoint{
+										otlpmetrics.ExponentialHistogramDataPoint_builder{
+											Attributes: []*otlpcommon.KeyValue{
+												otlpcommon.KeyValue_builder{
+													Key:   "k",
+													Value: otlpcommon.AnyValue_builder{StringValue: utils.Ref("v")}.Build(),
+												}.Build(),
 											},
-										},
+											StartTimeUnixNano: startTime + 1,
+											TimeUnixNano:      endTime + 1,
+										}.Build(),
 									},
-								},
-							},
+								}.Build(),
+							}.Build(),
 						},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}, md.getOrig())
+	}.Build(), md.getOrig())
 }
 
 func TestMetricsCopyTo(t *testing.T) {
@@ -648,44 +637,44 @@ func TestReadOnlyMetricsInvalidUsage(t *testing.T) {
 }
 
 func BenchmarkOtlpToFromInternal_PassThrough(b *testing.B) {
-	req := &otlpcollectormetrics.ExportMetricsServiceRequest{
+	req := otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric(), generateTestProtoSumMetric(), generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}
+	}.Build()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		md := newMetrics(req)
 		newReq := md.getOrig()
-		if len(req.ResourceMetrics) != len(newReq.ResourceMetrics) {
+		if len(req.GetResourceMetrics()) != len(newReq.GetResourceMetrics()) {
 			b.Fail()
 		}
 	}
 }
 
 func BenchmarkOtlpToFromInternal_Gauge_MutateOneLabel(b *testing.B) {
-	req := &otlpcollectormetrics.ExportMetricsServiceRequest{
+	req := otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoGaugeMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}
+	}.Build()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -693,26 +682,26 @@ func BenchmarkOtlpToFromInternal_Gauge_MutateOneLabel(b *testing.B) {
 		md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes().
 			PutStr("key0", "value2")
 		newReq := md.getOrig()
-		if len(req.ResourceMetrics) != len(newReq.ResourceMetrics) {
+		if len(req.GetResourceMetrics()) != len(newReq.GetResourceMetrics()) {
 			b.Fail()
 		}
 	}
 }
 
 func BenchmarkOtlpToFromInternal_Sum_MutateOneLabel(b *testing.B) {
-	req := &otlpcollectormetrics.ExportMetricsServiceRequest{
+	req := otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoSumMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}
+	}.Build()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -720,26 +709,26 @@ func BenchmarkOtlpToFromInternal_Sum_MutateOneLabel(b *testing.B) {
 		md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Sum().DataPoints().At(0).Attributes().
 			PutStr("key0", "value2")
 		newReq := md.getOrig()
-		if len(req.ResourceMetrics) != len(newReq.ResourceMetrics) {
+		if len(req.GetResourceMetrics()) != len(newReq.GetResourceMetrics()) {
 			b.Fail()
 		}
 	}
 }
 
 func BenchmarkOtlpToFromInternal_HistogramPoints_MutateOneLabel(b *testing.B) {
-	req := &otlpcollectormetrics.ExportMetricsServiceRequest{
+	req := otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				Resource: generateTestProtoResource(),
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Scope:   generateTestProtoInstrumentationScope(),
 						Metrics: []*otlpmetrics.Metric{generateTestProtoHistogramMetric()},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}
+	}.Build()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -747,202 +736,202 @@ func BenchmarkOtlpToFromInternal_HistogramPoints_MutateOneLabel(b *testing.B) {
 		md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Histogram().DataPoints().At(0).Attributes().
 			PutStr("key0", "value2")
 		newReq := md.getOrig()
-		if len(req.ResourceMetrics) != len(newReq.ResourceMetrics) {
+		if len(req.GetResourceMetrics()) != len(newReq.GetResourceMetrics()) {
 			b.Fail()
 		}
 	}
 }
 
-func generateTestProtoResource() otlpresource.Resource {
-	return otlpresource.Resource{
-		Attributes: []otlpcommon.KeyValue{
-			{
+func generateTestProtoResource() *otlpresource.Resource {
+	return otlpresource.Resource_builder{
+		Attributes: []*otlpcommon.KeyValue{
+			otlpcommon.KeyValue_builder{
 				Key:   "string",
-				Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "string-resource"}},
-			},
+				Value: otlpcommon.AnyValue_builder{StringValue: utils.Ref("string-resource")}.Build(),
+			}.Build(),
 		},
-	}
+	}.Build()
 }
 
-func generateTestProtoInstrumentationScope() otlpcommon.InstrumentationScope {
-	return otlpcommon.InstrumentationScope{
+func generateTestProtoInstrumentationScope() *otlpcommon.InstrumentationScope {
+	return otlpcommon.InstrumentationScope_builder{
 		Name:    "test",
 		Version: "",
-	}
+	}.Build()
 }
 
 func generateTestProtoGaugeMetric() *otlpmetrics.Metric {
-	return &otlpmetrics.Metric{
+	return otlpmetrics.Metric_builder{
 		Name:        "my_metric_int",
 		Description: "My metric",
 		Unit:        "ms",
-		Data: &otlpmetrics.Metric_Gauge{
-			Gauge: &otlpmetrics.Gauge{
-				DataPoints: []*otlpmetrics.NumberDataPoint{
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key0",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value0"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						Value: &otlpmetrics.NumberDataPoint_AsDouble{
-							AsDouble: 123.1,
-						},
+		Gauge: otlpmetrics.Gauge_builder{
+			DataPoints: []*otlpmetrics.NumberDataPoint{
+				otlpmetrics.NumberDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key0",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value0"),
+							}.Build(),
+						}.Build(),
 					},
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key1",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value1"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						Value: &otlpmetrics.NumberDataPoint_AsDouble{
-							AsDouble: 456.1,
-						},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					AsDouble:          utils.Ref(123.1),
+				}.Build(),
+				otlpmetrics.NumberDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key1",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value1"),
+							}.Build(),
+						}.Build(),
 					},
-				},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					AsDouble:          utils.Ref(456.1),
+				}.Build(),
 			},
-		},
-	}
+		}.Build(),
+	}.Build()
 }
 
 func generateTestProtoSumMetric() *otlpmetrics.Metric {
-	return &otlpmetrics.Metric{
+	return otlpmetrics.Metric_builder{
 		Name:        "my_metric_double",
 		Description: "My metric",
 		Unit:        "ms",
-		Data: &otlpmetrics.Metric_Sum{
-			Sum: &otlpmetrics.Sum{
-				AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
-				DataPoints: []*otlpmetrics.NumberDataPoint{
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key0",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value0"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						Value: &otlpmetrics.NumberDataPoint_AsDouble{
-							AsDouble: 123.1,
-						},
+		Sum: otlpmetrics.Sum_builder{
+			AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+			DataPoints: []*otlpmetrics.NumberDataPoint{
+				otlpmetrics.NumberDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key0",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value0"),
+							}.Build(),
+						}.Build(),
 					},
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key1",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value1"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						Value: &otlpmetrics.NumberDataPoint_AsDouble{
-							AsDouble: 456.1,
-						},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					AsDouble:          utils.Ref(123.1),
+				}.Build(),
+				otlpmetrics.NumberDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key1",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value1"),
+							}.Build(),
+						}.Build(),
 					},
-				},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					AsDouble:          utils.Ref(456.1),
+				}.Build(),
 			},
-		},
-	}
+		}.Build(),
+	}.Build()
 }
 
 func generateTestProtoHistogramMetric() *otlpmetrics.Metric {
-	return &otlpmetrics.Metric{
+	return otlpmetrics.Metric_builder{
 		Name:        "my_metric_histogram",
 		Description: "My metric",
 		Unit:        "ms",
-		Data: &otlpmetrics.Metric_Histogram{
-			Histogram: &otlpmetrics.Histogram{
-				AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
-				DataPoints: []*otlpmetrics.HistogramDataPoint{
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key0",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value0"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						BucketCounts:      []uint64{10, 15, 1},
-						ExplicitBounds:    []float64{1, 2},
+		Histogram: otlpmetrics.Histogram_builder{
+			AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA,
+			DataPoints: []*otlpmetrics.HistogramDataPoint{
+				otlpmetrics.HistogramDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key0",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value0"),
+							}.Build(),
+						}.Build(),
 					},
-					{
-						Attributes: []otlpcommon.KeyValue{
-							{
-								Key:   "key1",
-								Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "value1"}},
-							},
-						},
-						StartTimeUnixNano: startTime,
-						TimeUnixNano:      endTime,
-						BucketCounts:      []uint64{10, 1},
-						ExplicitBounds:    []float64{1},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					BucketCounts:      []uint64{10, 15, 1},
+					ExplicitBounds:    []float64{1, 2},
+				}.Build(),
+				otlpmetrics.HistogramDataPoint_builder{
+					Attributes: []*otlpcommon.KeyValue{
+						otlpcommon.KeyValue_builder{
+							Key: "key1",
+							Value: otlpcommon.AnyValue_builder{
+								StringValue: utils.Ref("value1"),
+							}.Build(),
+						}.Build(),
 					},
-				},
+					StartTimeUnixNano: startTime,
+					TimeUnixNano:      endTime,
+					BucketCounts:      []uint64{10, 1},
+					ExplicitBounds:    []float64{1},
+				}.Build(),
 			},
-		},
-	}
+		}.Build(),
+	}.Build()
 }
 
 func generateMetricsEmptyResource() Metrics {
-	return newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	return newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{{}},
-	})
+	}.Build())
 }
 
 func generateMetricsEmptyInstrumentation() Metrics {
-	return newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	return newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
-				ScopeMetrics: []*otlpmetrics.ScopeMetrics{{}},
-			},
+			otlpmetrics.ResourceMetrics_builder{
+				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
+					otlpmetrics.ScopeMetrics_builder{}.Build(),
+				},
+			}.Build(),
 		},
-	})
+	}.Build())
 }
 
 func generateMetricsEmptyMetrics() Metrics {
-	return newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	return newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
-						Metrics: []*otlpmetrics.Metric{{}},
-					},
+					otlpmetrics.ScopeMetrics_builder{
+						Metrics: []*otlpmetrics.Metric{
+							otlpmetrics.Metric_builder{}.Build(),
+						},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 }
 
 func generateMetricsEmptyDataPoints() Metrics {
-	return newMetrics(&otlpcollectormetrics.ExportMetricsServiceRequest{
+	return newMetrics(otlpcollectormetrics.ExportMetricsServiceRequest_builder{
 		ResourceMetrics: []*otlpmetrics.ResourceMetrics{
-			{
+			otlpmetrics.ResourceMetrics_builder{
 				ScopeMetrics: []*otlpmetrics.ScopeMetrics{
-					{
+					otlpmetrics.ScopeMetrics_builder{
 						Metrics: []*otlpmetrics.Metric{
-							{
-								Data: &otlpmetrics.Metric_Gauge{
-									Gauge: &otlpmetrics.Gauge{
-										DataPoints: []*otlpmetrics.NumberDataPoint{
-											{},
-										},
+							otlpmetrics.Metric_builder{
+								Gauge: otlpmetrics.Gauge_builder{
+									DataPoints: []*otlpmetrics.NumberDataPoint{
+										otlpmetrics.NumberDataPoint_builder{}.Build(),
 									},
-								},
-							},
+								}.Build(),
+							}.Build(),
 						},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	})
+	}.Build())
 }
 
 func BenchmarkMetricsUsage(b *testing.B) {

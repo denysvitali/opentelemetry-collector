@@ -56,7 +56,8 @@ func (ms Traces) SpanCount() int {
 
 // ResourceSpans returns the ResourceSpansSlice associated with this Metrics.
 func (ms Traces) ResourceSpans() ResourceSpansSlice {
-	return newResourceSpansSlice(&ms.getOrig().ResourceSpans, internal.GetTracesState(internal.Traces(ms)))
+	rSpans := ms.getOrig().GetResourceSpans()
+	return newResourceSpansSlice(&rSpans, internal.GetTracesState(internal.Traces(ms)))
 }
 
 // MarkReadOnly marks the Traces as shared so that no further modifications can be done on it.

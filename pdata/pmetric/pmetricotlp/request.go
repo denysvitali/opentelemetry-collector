@@ -6,6 +6,8 @@ package pmetricotlp // import "go.opentelemetry.io/collector/pdata/pmetric/pmetr
 import (
 	"bytes"
 
+	"google.golang.org/protobuf/proto"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
 	"go.opentelemetry.io/collector/pdata/internal/json"
@@ -42,12 +44,12 @@ func NewExportRequestFromMetrics(md pmetric.Metrics) ExportRequest {
 
 // MarshalProto marshals ExportRequest into proto bytes.
 func (ms ExportRequest) MarshalProto() ([]byte, error) {
-	return ms.orig.Marshal()
+	return proto.Marshal(ms.orig)
 }
 
 // UnmarshalProto unmarshalls ExportRequest from proto bytes.
 func (ms ExportRequest) UnmarshalProto(data []byte) error {
-	return ms.orig.Unmarshal(data)
+	return proto.Unmarshal(data, ms.orig)
 }
 
 // MarshalJSON marshals ExportRequest into JSON bytes.

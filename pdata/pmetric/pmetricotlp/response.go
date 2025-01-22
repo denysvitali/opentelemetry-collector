@@ -6,6 +6,8 @@ package pmetricotlp // import "go.opentelemetry.io/collector/pdata/pmetric/pmetr
 import (
 	"bytes"
 
+	"google.golang.org/protobuf/proto"
+
 	jsoniter "github.com/json-iterator/go"
 
 	"go.opentelemetry.io/collector/pdata/internal"
@@ -30,12 +32,12 @@ func NewExportResponse() ExportResponse {
 
 // MarshalProto marshals ExportResponse into proto bytes.
 func (ms ExportResponse) MarshalProto() ([]byte, error) {
-	return ms.orig.Marshal()
+	return proto.Marshal(ms.orig)
 }
 
 // UnmarshalProto unmarshalls ExportResponse from proto bytes.
 func (ms ExportResponse) UnmarshalProto(data []byte) error {
-	return ms.orig.Unmarshal(data)
+	return proto.Unmarshal(data, ms.orig)
 }
 
 // MarshalJSON marshals ExportResponse into JSON bytes.
@@ -57,7 +59,7 @@ func (ms ExportResponse) UnmarshalJSON(data []byte) error {
 
 // PartialSuccess returns the ExportLogsPartialSuccess associated with this ExportResponse.
 func (ms ExportResponse) PartialSuccess() ExportPartialSuccess {
-	return newExportPartialSuccess(&ms.orig.PartialSuccess, ms.state)
+	return newExportPartialSuccess(ms.orig.GetPartialSuccess(), ms.state)
 }
 
 func (ms ExportResponse) unmarshalJsoniter(iter *jsoniter.Iterator) {
@@ -76,9 +78,9 @@ func (ms ExportPartialSuccess) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(_ *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "rejected_data_points", "rejectedDataPoints":
-			ms.orig.RejectedDataPoints = json.ReadInt64(iter)
+			ms.orig.SetRejectedDataPoints(json.ReadInt64(iter))
 		case "error_message", "errorMessage":
-			ms.orig.ErrorMessage = iter.ReadString()
+			ms.orig.SetErrorMessage(iter.ReadString())
 		default:
 			iter.Skip()
 		}

@@ -12,7 +12,9 @@ var ptrace = &Package{
 			``,
 			`"go.opentelemetry.io/collector/pdata/internal"`,
 			`"go.opentelemetry.io/collector/pdata/internal/data"`,
+			`otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"`,
 			`otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"`,
+			`otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"`,
 			`"go.opentelemetry.io/collector/pdata/pcommon"`,
 		},
 		testImports: []string{

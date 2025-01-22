@@ -13,20 +13,16 @@ import (
 
 func TestDeprecatedScopeMetrics(t *testing.T) {
 	sm := new(otlpmetrics.ScopeMetrics)
-	rms := []*otlpmetrics.ResourceMetrics{
-		{
-			ScopeMetrics:           []*otlpmetrics.ScopeMetrics{sm},
-			DeprecatedScopeMetrics: []*otlpmetrics.ScopeMetrics{sm},
-		},
-		{
-			ScopeMetrics:           []*otlpmetrics.ScopeMetrics{},
-			DeprecatedScopeMetrics: []*otlpmetrics.ScopeMetrics{sm},
-		},
-	}
+	sm1 := &otlpmetrics.ResourceMetrics{}
+	sm1.SetScopeMetrics([]*otlpmetrics.ScopeMetrics{sm})
+	sm1.SetDeprecatedScopeMetrics([]*otlpmetrics.ScopeMetrics{sm})
+	sm2 := &otlpmetrics.ResourceMetrics{}
+	sm2.SetDeprecatedScopeMetrics([]*otlpmetrics.ScopeMetrics{sm})
+	rms := []*otlpmetrics.ResourceMetrics{sm1, sm2}
 
 	MigrateMetrics(rms)
-	assert.Same(t, sm, rms[0].ScopeMetrics[0])
-	assert.Same(t, sm, rms[1].ScopeMetrics[0])
-	assert.Nil(t, rms[0].DeprecatedScopeMetrics)
-	assert.Nil(t, rms[0].DeprecatedScopeMetrics)
+	assert.Same(t, sm, rms[0].GetScopeMetrics()[0])
+	assert.Same(t, sm, rms[1].GetScopeMetrics()[0])
+	assert.Nil(t, rms[0].GetDeprecatedScopeMetrics())
+	assert.Nil(t, rms[0].GetDeprecatedScopeMetrics())
 }

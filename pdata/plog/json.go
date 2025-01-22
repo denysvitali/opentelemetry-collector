@@ -5,7 +5,6 @@ package plog // import "go.opentelemetry.io/collector/pdata/plog"
 
 import (
 	"bytes"
-	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -22,7 +21,7 @@ type JSONMarshaler struct{}
 func (*JSONMarshaler) MarshalLogs(ld Logs) ([]byte, error) {
 	buf := bytes.Buffer{}
 	pb := internal.LogsToProto(internal.Logs(ld))
-	err := json.Marshal(&buf, &pb)
+	err := json.Marshal(&buf, pb)
 	return buf.Bytes(), err
 }
 
@@ -40,7 +39,7 @@ func (*JSONUnmarshaler) UnmarshalLogs(buf []byte) (Logs, error) {
 	if iter.Error != nil {
 		return Logs{}, iter.Error
 	}
-	otlp.MigrateLogs(ld.getOrig().ResourceLogs)
+	otlp.MigrateLogs(ld.getOrig().GetResourceLogs())
 	return ld, nil
 }
 
@@ -63,14 +62,14 @@ func (ms ResourceLogs) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "resource":
-			json.ReadResource(iter, &ms.orig.Resource)
+			json.ReadResource(iter, ms.orig.GetResource())
 		case "scope_logs", "scopeLogs":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.ScopeLogs().AppendEmpty().unmarshalJsoniter(iter)
 				return true
 			})
 		case "schemaUrl", "schema_url":
-			ms.orig.SchemaUrl = iter.ReadString()
+			ms.orig.SetSchemaUrl(iter.ReadString())
 		default:
 			iter.Skip()
 		}
@@ -82,14 +81,14 @@ func (ms ScopeLogs) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "scope":
-			json.ReadScope(iter, &ms.orig.Scope)
+			json.ReadScope(iter, ms.orig.GetScope())
 		case "log_records", "logRecords":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.LogRecords().AppendEmpty().unmarshalJsoniter(iter)
 				return true
 			})
 		case "schemaUrl", "schema_url":
-			ms.orig.SchemaUrl = iter.ReadString()
+			ms.orig.SetSchemaUrl(iter.ReadString())
 		default:
 			iter.Skip()
 		}
@@ -101,32 +100,28 @@ func (ms LogRecord) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "observed_time_unix_nano", "observedTimeUnixNano":
-			ms.orig.ObservedTimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetObservedTimeUnixNano(json.ReadUint64(iter))
 		case "severity_number", "severityNumber":
-			ms.orig.SeverityNumber = otlplogs.SeverityNumber(json.ReadEnumValue(iter, otlplogs.SeverityNumber_value))
+			ms.orig.SetSeverityNumber(otlplogs.SeverityNumber(json.ReadEnumValue(iter, otlplogs.SeverityNumber_value)))
 		case "severity_text", "severityText":
-			ms.orig.SeverityText = iter.ReadString()
+			ms.orig.SetSeverityText(iter.ReadString())
 		case "body":
-			json.ReadValue(iter, &ms.orig.Body)
+			json.ReadValue(iter, ms.orig.GetBody())
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Attributes = append(ms.orig.Attributes, json.ReadAttribute(iter))
+				ms.orig.SetAttributes(append(ms.orig.GetAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "droppedAttributesCount", "dropped_attributes_count":
-			ms.orig.DroppedAttributesCount = json.ReadUint32(iter)
+			ms.orig.SetDroppedAttributesCount(json.ReadUint32(iter))
 		case "flags":
-			ms.orig.Flags = json.ReadUint32(iter)
+			ms.orig.SetFlags(json.ReadUint32(iter))
 		case "traceId", "trace_id":
-			if err := ms.orig.TraceId.UnmarshalJSON([]byte(iter.ReadString())); err != nil {
-				iter.ReportError("readLog.traceId", fmt.Sprintf("parse trace_id:%v", err))
-			}
+			ms.orig.SetTraceId(iter.ReadStringAsSlice())
 		case "spanId", "span_id":
-			if err := ms.orig.SpanId.UnmarshalJSON([]byte(iter.ReadString())); err != nil {
-				iter.ReportError("readLog.spanId", fmt.Sprintf("parse span_id:%v", err))
-			}
+			ms.orig.SetSpanId(iter.ReadStringAsSlice())
 		default:
 			iter.Skip()
 		}

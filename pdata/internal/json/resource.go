@@ -14,11 +14,11 @@ func ReadResource(iter *jsoniter.Iterator, resource *otlpresource.Resource) {
 		switch f {
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				resource.Attributes = append(resource.Attributes, ReadAttribute(iter))
+				resource.SetAttributes(append(resource.GetAttributes(), ReadAttribute(iter)))
 				return true
 			})
 		case "droppedAttributesCount", "dropped_attributes_count":
-			resource.DroppedAttributesCount = ReadUint32(iter)
+			resource.SetDroppedAttributesCount(ReadUint32(iter))
 		default:
 			iter.Skip()
 		}

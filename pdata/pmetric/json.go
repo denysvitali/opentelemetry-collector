@@ -5,7 +5,6 @@ package pmetric // import "go.opentelemetry.io/collector/pdata/pmetric"
 
 import (
 	"bytes"
-	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -24,7 +23,7 @@ type JSONMarshaler struct{}
 func (*JSONMarshaler) MarshalMetrics(md Metrics) ([]byte, error) {
 	buf := bytes.Buffer{}
 	pb := internal.MetricsToProto(internal.Metrics(md))
-	err := json.Marshal(&buf, &pb)
+	err := json.Marshal(&buf, pb)
 	return buf.Bytes(), err
 }
 
@@ -40,7 +39,7 @@ func (*JSONUnmarshaler) UnmarshalMetrics(buf []byte) (Metrics, error) {
 	if iter.Error != nil {
 		return Metrics{}, iter.Error
 	}
-	otlp.MigrateMetrics(md.getOrig().ResourceMetrics)
+	otlp.MigrateMetrics(md.getOrig().GetResourceMetrics())
 	return md, nil
 }
 
@@ -63,14 +62,14 @@ func (ms ResourceMetrics) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "resource":
-			json.ReadResource(iter, &ms.orig.Resource)
+			json.ReadResource(iter, ms.orig.GetResource())
 		case "scopeMetrics", "scope_metrics":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.ScopeMetrics().AppendEmpty().unmarshalJsoniter(iter)
 				return true
 			})
 		case "schemaUrl", "schema_url":
-			ms.orig.SchemaUrl = iter.ReadString()
+			ms.orig.SetSchemaUrl(iter.ReadString())
 		default:
 			iter.Skip()
 		}
@@ -82,14 +81,14 @@ func (ms ScopeMetrics) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "scope":
-			json.ReadScope(iter, &ms.orig.Scope)
+			json.ReadScope(iter, ms.orig.GetScope())
 		case "metrics":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.Metrics().AppendEmpty().unmarshalJsoniter(iter)
 				return true
 			})
 		case "schemaUrl", "schema_url":
-			ms.orig.SchemaUrl = iter.ReadString()
+			ms.orig.SetSchemaUrl(iter.ReadString())
 		default:
 			iter.Skip()
 		}
@@ -101,14 +100,14 @@ func (ms Metric) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "name":
-			ms.orig.Name = iter.ReadString()
+			ms.orig.SetName(iter.ReadString())
 		case "description":
-			ms.orig.Description = iter.ReadString()
+			ms.orig.SetDescription(iter.ReadString())
 		case "unit":
-			ms.orig.Unit = iter.ReadString()
+			ms.orig.SetUnit(iter.ReadString())
 		case "metadata":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Metadata = append(ms.orig.Metadata, json.ReadAttribute(iter))
+				ms.orig.SetMetadata(append(ms.orig.GetMetadata(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "sum":
@@ -132,9 +131,9 @@ func (ms Sum) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "aggregation_temporality", "aggregationTemporality":
-			ms.orig.AggregationTemporality = readAggregationTemporality(iter)
+			ms.orig.SetAggregationTemporality(readAggregationTemporality(iter))
 		case "is_monotonic", "isMonotonic":
-			ms.orig.IsMonotonic = iter.ReadBool()
+			ms.orig.SetIsMonotonic(iter.ReadBool())
 		case "data_points", "dataPoints":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.DataPoints().AppendEmpty().unmarshalJsoniter(iter)
@@ -171,7 +170,7 @@ func (ms Histogram) unmarshalJsoniter(iter *jsoniter.Iterator) {
 				return true
 			})
 		case "aggregation_temporality", "aggregationTemporality":
-			ms.orig.AggregationTemporality = readAggregationTemporality(iter)
+			ms.orig.SetAggregationTemporality(readAggregationTemporality(iter))
 		default:
 			iter.Skip()
 		}
@@ -188,7 +187,7 @@ func (ms ExponentialHistogram) unmarshalJsoniter(iter *jsoniter.Iterator) {
 				return true
 			})
 		case "aggregation_temporality", "aggregationTemporality":
-			ms.orig.AggregationTemporality = readAggregationTemporality(iter)
+			ms.orig.SetAggregationTemporality(readAggregationTemporality(iter))
 		default:
 			iter.Skip()
 		}
@@ -215,20 +214,16 @@ func (ms NumberDataPoint) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "start_time_unix_nano", "startTimeUnixNano":
-			ms.orig.StartTimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetStartTimeUnixNano(json.ReadUint64(iter))
 		case "as_int", "asInt":
-			ms.orig.Value = &otlpmetrics.NumberDataPoint_AsInt{
-				AsInt: json.ReadInt64(iter),
-			}
+			ms.orig.SetAsInt(json.ReadInt64(iter))
 		case "as_double", "asDouble":
-			ms.orig.Value = &otlpmetrics.NumberDataPoint_AsDouble{
-				AsDouble: json.ReadFloat64(iter),
-			}
+			ms.orig.SetAsDouble(json.ReadFloat64(iter))
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Attributes = append(ms.orig.Attributes, json.ReadAttribute(iter))
+				ms.orig.SetAttributes(append(ms.orig.GetAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "exemplars":
@@ -237,7 +232,7 @@ func (ms NumberDataPoint) unmarshalJsoniter(iter *jsoniter.Iterator) {
 				return true
 			})
 		case "flags":
-			ms.orig.Flags = json.ReadUint32(iter)
+			ms.orig.SetFlags(json.ReadUint32(iter))
 		default:
 			iter.Skip()
 		}
@@ -249,26 +244,27 @@ func (ms HistogramDataPoint) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "start_time_unix_nano", "startTimeUnixNano":
-			ms.orig.StartTimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetStartTimeUnixNano(json.ReadUint64(iter))
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Attributes = append(ms.orig.Attributes, json.ReadAttribute(iter))
+				ms.orig.SetAttributes(append(ms.orig.GetAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "count":
-			ms.orig.Count = json.ReadUint64(iter)
+			ms.orig.SetCount(json.ReadUint64(iter))
 		case "sum":
-			ms.orig.Sum_ = &otlpmetrics.HistogramDataPoint_Sum{Sum: json.ReadFloat64(iter)}
+			v := json.ReadFloat64(iter)
+			ms.orig.SetSum(v)
 		case "bucket_counts", "bucketCounts":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.BucketCounts = append(ms.orig.BucketCounts, json.ReadUint64(iter))
+				ms.orig.SetBucketCounts(append(ms.orig.GetBucketCounts(), json.ReadUint64(iter)))
 				return true
 			})
 		case "explicit_bounds", "explicitBounds":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.ExplicitBounds = append(ms.orig.ExplicitBounds, json.ReadFloat64(iter))
+				ms.orig.SetExplicitBounds(append(ms.orig.GetExplicitBounds(), json.ReadFloat64(iter)))
 				return true
 			})
 		case "exemplars":
@@ -277,15 +273,11 @@ func (ms HistogramDataPoint) unmarshalJsoniter(iter *jsoniter.Iterator) {
 				return true
 			})
 		case "flags":
-			ms.orig.Flags = json.ReadUint32(iter)
+			ms.orig.SetFlags(json.ReadUint32(iter))
 		case "max":
-			ms.orig.Max_ = &otlpmetrics.HistogramDataPoint_Max{
-				Max: json.ReadFloat64(iter),
-			}
+			ms.orig.SetMax(json.ReadFloat64(iter))
 		case "min":
-			ms.orig.Min_ = &otlpmetrics.HistogramDataPoint_Min{
-				Min: json.ReadFloat64(iter),
-			}
+			ms.orig.SetMin(json.ReadFloat64(iter))
 		default:
 			iter.Skip()
 		}
@@ -297,47 +289,25 @@ func (ms ExponentialHistogramDataPoint) unmarshalJsoniter(iter *jsoniter.Iterato
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "start_time_unix_nano", "startTimeUnixNano":
-			ms.orig.StartTimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetStartTimeUnixNano(json.ReadUint64(iter))
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Attributes = append(ms.orig.Attributes, json.ReadAttribute(iter))
+				ms.orig.SetAttributes(append(ms.orig.GetAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "count":
-			ms.orig.Count = json.ReadUint64(iter)
+			ms.orig.SetCount(json.ReadUint64(iter))
 		case "sum":
-			ms.orig.Sum_ = &otlpmetrics.ExponentialHistogramDataPoint_Sum{
-				Sum: json.ReadFloat64(iter),
-			}
+			ms.orig.SetSum(json.ReadFloat64(iter))
 		case "scale":
-			ms.orig.Scale = iter.ReadInt32()
+			ms.orig.SetScale(iter.ReadInt32())
 		case "zero_count", "zeroCount":
-			ms.orig.ZeroCount = json.ReadUint64(iter)
-		case "positive":
-			ms.Positive().unmarshalJsoniter(iter)
-		case "negative":
-			ms.Negative().unmarshalJsoniter(iter)
-		case "exemplars":
-			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.Exemplars().AppendEmpty().unmarshalJsoniter(iter)
-				return true
-			})
-		case "flags":
-			ms.orig.Flags = json.ReadUint32(iter)
-		case "max":
-			ms.orig.Max_ = &otlpmetrics.ExponentialHistogramDataPoint_Max{
-				Max: json.ReadFloat64(iter),
-			}
-		case "min":
-			ms.orig.Min_ = &otlpmetrics.ExponentialHistogramDataPoint_Min{
-				Min: json.ReadFloat64(iter),
-			}
-		default:
-			iter.Skip()
+			ms.orig.SetZeroCount(json.ReadUint64(iter))
+			return true
 		}
-		return true
+		return false
 	})
 }
 
@@ -345,25 +315,25 @@ func (ms SummaryDataPoint) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "start_time_unix_nano", "startTimeUnixNano":
-			ms.orig.StartTimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetStartTimeUnixNano(json.ReadUint64(iter))
 		case "attributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.Attributes = append(ms.orig.Attributes, json.ReadAttribute(iter))
+				ms.orig.SetAttributes(append(ms.orig.GetAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "count":
-			ms.orig.Count = json.ReadUint64(iter)
+			ms.orig.SetCount(json.ReadUint64(iter))
 		case "sum":
-			ms.orig.Sum = json.ReadFloat64(iter)
+			ms.orig.SetSum(json.ReadFloat64(iter))
 		case "quantile_values", "quantileValues":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 				ms.QuantileValues().AppendEmpty().unmarshalJsoniter(iter)
 				return true
 			})
 		case "flags":
-			ms.orig.Flags = json.ReadUint32(iter)
+			ms.orig.SetFlags(json.ReadUint32(iter))
 		default:
 			iter.Skip()
 		}
@@ -376,11 +346,11 @@ func (ms ExponentialHistogramDataPointBuckets) unmarshalJsoniter(iter *jsoniter.
 		switch f {
 		case "bucket_counts", "bucketCounts":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.BucketCounts = append(ms.orig.BucketCounts, json.ReadUint64(iter))
+				ms.orig.SetBucketCounts(append(ms.orig.GetBucketCounts(), json.ReadUint64(iter)))
 				return true
 			})
 		case "offset":
-			ms.orig.Offset = iter.ReadInt32()
+			ms.orig.SetOffset(iter.ReadInt32())
 		default:
 			iter.Skip()
 		}
@@ -392,9 +362,9 @@ func (ms SummaryDataPointValueAtQuantile) unmarshalJsoniter(iter *jsoniter.Itera
 	iter.ReadObjectCB(func(iter *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "quantile":
-			ms.orig.Quantile = json.ReadFloat64(iter)
+			ms.orig.SetQuantile(json.ReadFloat64(iter))
 		case "value":
-			ms.orig.Value = json.ReadFloat64(iter)
+			ms.orig.SetValue(json.ReadFloat64(iter))
 		default:
 			iter.Skip()
 		}
@@ -407,27 +377,19 @@ func (ms Exemplar) unmarshalJsoniter(iter *jsoniter.Iterator) {
 		switch f {
 		case "filtered_attributes", "filteredAttributes":
 			iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-				ms.orig.FilteredAttributes = append(ms.orig.FilteredAttributes, json.ReadAttribute(iter))
+				ms.orig.SetFilteredAttributes(append(ms.orig.GetFilteredAttributes(), json.ReadAttribute(iter)))
 				return true
 			})
 		case "timeUnixNano", "time_unix_nano":
-			ms.orig.TimeUnixNano = json.ReadUint64(iter)
+			ms.orig.SetTimeUnixNano(json.ReadUint64(iter))
 		case "as_int", "asInt":
-			ms.orig.Value = &otlpmetrics.Exemplar_AsInt{
-				AsInt: json.ReadInt64(iter),
-			}
+			ms.orig.SetAsInt(json.ReadInt64(iter))
 		case "as_double", "asDouble":
-			ms.orig.Value = &otlpmetrics.Exemplar_AsDouble{
-				AsDouble: json.ReadFloat64(iter),
-			}
+			ms.orig.SetAsDouble(json.ReadFloat64(iter))
 		case "traceId", "trace_id":
-			if err := ms.orig.TraceId.UnmarshalJSON([]byte(iter.ReadString())); err != nil {
-				iter.ReportError("exemplar.traceId", fmt.Sprintf("parse trace_id:%v", err))
-			}
+			ms.orig.SetTraceId(iter.ReadStringAsSlice())
 		case "spanId", "span_id":
-			if err := ms.orig.SpanId.UnmarshalJSON([]byte(iter.ReadString())); err != nil {
-				iter.ReportError("exemplar.spanId", fmt.Sprintf("parse span_id:%v", err))
-			}
+			ms.orig.SetSpanId(iter.ReadStringAsSlice())
 		default:
 			iter.Skip()
 		}

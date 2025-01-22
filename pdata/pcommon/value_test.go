@@ -47,7 +47,7 @@ func TestValue(t *testing.T) {
 
 func TestValueReadOnly(t *testing.T) {
 	state := internal.StateReadOnly
-	v := newValue(&otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v"}}, &state)
+	v := newValue(otlpcommon.AnyValue_builder{StringValue: ref("v")}.Build(), &state)
 
 	assert.EqualValues(t, ValueTypeStr, v.Type())
 	assert.EqualValues(t, "v", v.Str())
@@ -157,7 +157,7 @@ func TestValueMap(t *testing.T) {
 	assert.False(t, exists)
 
 	// Test nil KvlistValue case for Map() func.
-	orig := &otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_KvlistValue{KvlistValue: nil}}
+	orig := otlpcommon.AnyValue_builder{KvlistValue: nil}.Build()
 	state := internal.StateMutable
 	m1 = newValue(orig, &state)
 	assert.EqualValues(t, Map{}, m1.Map())
@@ -197,7 +197,7 @@ func TestValueSlice(t *testing.T) {
 
 	// Test nil values case for Slice() func.
 	state := internal.StateMutable
-	a1 = newValue(&otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_ArrayValue{ArrayValue: nil}}, &state)
+	a1 = newValue(otlpcommon.AnyValue_builder{ArrayValue: nil}.Build(), &state)
 	assert.EqualValues(t, newSlice(nil, nil), a1.Slice())
 }
 
@@ -236,31 +236,33 @@ func TestValue_CopyTo(t *testing.T) {
 
 	// Test nil KvlistValue case for Map() func.
 	dest := NewValueEmpty()
-	orig := &otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_KvlistValue{KvlistValue: nil}}
+	orig := otlpcommon.AnyValue_builder{KvlistValue: nil}.Build()
 	newValue(orig, &state).CopyTo(dest)
-	assert.Nil(t, dest.getOrig().Value.(*otlpcommon.AnyValue_KvlistValue).KvlistValue)
+	assert.Nil(t, dest.getOrig().GetKvlistValue())
 
 	// Test nil ArrayValue case for Slice() func.
 	dest = NewValueEmpty()
-	orig = &otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_ArrayValue{ArrayValue: nil}}
+	orig = otlpcommon.AnyValue_builder{ArrayValue: nil}.Build()
 	newValue(orig, &state).CopyTo(dest)
-	assert.Nil(t, dest.getOrig().Value.(*otlpcommon.AnyValue_ArrayValue).ArrayValue)
+	assert.Nil(t, dest.getOrig().GetArrayValue())
 
 	// Test copy empty value.
 	orig = &otlpcommon.AnyValue{}
 	newValue(orig, &state).CopyTo(dest)
-	assert.Nil(t, dest.getOrig().Value)
+	assert.Equal(t, otlpcommon.AnyValue_Value_not_set_case, dest.getOrig().WhichValue())
 
 	av := NewValueEmpty()
-	destVal := otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_IntValue{}}
-	av.CopyTo(newValue(&destVal, &state))
-	assert.Nil(t, destVal.Value)
+	destVal := otlpcommon.AnyValue_builder{IntValue: nil}.Build()
+	av.CopyTo(newValue(destVal, &state))
+	assert.Equal(t, otlpcommon.AnyValue_Value_not_set_case, destVal.WhichValue())
 }
 
 func TestSliceWithNilValues(t *testing.T) {
-	origWithNil := []otlpcommon.AnyValue{
+	origWithNil := []*otlpcommon.AnyValue{
 		{},
-		{Value: &otlpcommon.AnyValue_StringValue{StringValue: "test_value"}},
+		otlpcommon.AnyValue_builder{
+			StringValue: ref("test_value"),
+		}.Build(),
 	}
 	state := internal.StateMutable
 	sm := newSlice(&origWithNil, &state)

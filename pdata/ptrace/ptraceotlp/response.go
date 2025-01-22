@@ -6,6 +6,8 @@ package ptraceotlp // import "go.opentelemetry.io/collector/pdata/ptrace/ptraceo
 import (
 	"bytes"
 
+	"google.golang.org/protobuf/proto"
+
 	jsoniter "github.com/json-iterator/go"
 
 	"go.opentelemetry.io/collector/pdata/internal"
@@ -30,12 +32,12 @@ func NewExportResponse() ExportResponse {
 
 // MarshalProto marshals ExportResponse into proto bytes.
 func (ms ExportResponse) MarshalProto() ([]byte, error) {
-	return ms.orig.Marshal()
+	return proto.Marshal(ms.orig)
 }
 
 // UnmarshalProto unmarshalls ExportResponse from proto bytes.
 func (ms ExportResponse) UnmarshalProto(data []byte) error {
-	return ms.orig.Unmarshal(data)
+	return proto.Unmarshal(data, ms.orig)
 }
 
 // MarshalJSON marshals ExportResponse into JSON bytes.
@@ -69,16 +71,16 @@ func (ms ExportResponse) unmarshalJsoniter(iter *jsoniter.Iterator) {
 
 // PartialSuccess returns the ExportLogsPartialSuccess associated with this ExportResponse.
 func (ms ExportResponse) PartialSuccess() ExportPartialSuccess {
-	return newExportPartialSuccess(&ms.orig.PartialSuccess, ms.state)
+	return newExportPartialSuccess(ms.orig.GetPartialSuccess(), ms.state)
 }
 
 func (ms ExportPartialSuccess) unmarshalJsoniter(iter *jsoniter.Iterator) {
 	iter.ReadObjectCB(func(_ *jsoniter.Iterator, f string) bool {
 		switch f {
 		case "rejected_spans", "rejectedSpans":
-			ms.orig.RejectedSpans = json.ReadInt64(iter)
+			ms.orig.SetRejectedSpans(json.ReadInt64(iter))
 		case "error_message", "errorMessage":
-			ms.orig.ErrorMessage = iter.ReadString()
+			ms.orig.SetErrorMessage(iter.ReadString())
 		default:
 			iter.Skip()
 		}

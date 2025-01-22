@@ -6,6 +6,7 @@ package pmetric // import "go.opentelemetry.io/collector/pdata/pmetric"
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Metrics is the top-level struct that is propagated through the metrics pipeline.
@@ -42,7 +43,7 @@ func (ms Metrics) CopyTo(dest Metrics) {
 
 // ResourceMetrics returns the ResourceMetricsSlice associated with this Metrics.
 func (ms Metrics) ResourceMetrics() ResourceMetricsSlice {
-	return newResourceMetricsSlice(&ms.getOrig().ResourceMetrics, internal.GetMetricsState(internal.Metrics(ms)))
+	return newResourceMetricsSlice(utils.Ref(ms.getOrig().GetResourceMetrics()), internal.GetMetricsState(internal.Metrics(ms)))
 }
 
 // MetricCount calculates the total number of metrics.

@@ -13,20 +13,16 @@ import (
 
 func TestDeprecatedScopeSpans(t *testing.T) {
 	ss := new(otlptrace.ScopeSpans)
-	rss := []*otlptrace.ResourceSpans{
-		{
-			ScopeSpans:           []*otlptrace.ScopeSpans{ss},
-			DeprecatedScopeSpans: []*otlptrace.ScopeSpans{ss},
-		},
-		{
-			ScopeSpans:           []*otlptrace.ScopeSpans{},
-			DeprecatedScopeSpans: []*otlptrace.ScopeSpans{ss},
-		},
-	}
+	ss1 := &otlptrace.ResourceSpans{}
+	ss1.SetScopeSpans([]*otlptrace.ScopeSpans{ss})
+	ss1.SetDeprecatedScopeSpans([]*otlptrace.ScopeSpans{ss})
+	ss2 := &otlptrace.ResourceSpans{}
+	ss2.SetDeprecatedScopeSpans([]*otlptrace.ScopeSpans{ss})
+	rss := []*otlptrace.ResourceSpans{ss1, ss2}
 
 	MigrateTraces(rss)
-	assert.Same(t, ss, rss[0].ScopeSpans[0])
-	assert.Same(t, ss, rss[1].ScopeSpans[0])
-	assert.Nil(t, rss[0].DeprecatedScopeSpans)
-	assert.Nil(t, rss[0].DeprecatedScopeSpans)
+	assert.Same(t, ss, rss[0].GetScopeSpans()[0])
+	assert.Same(t, ss, rss[1].GetScopeSpans()[0])
+	assert.Nil(t, rss[0].GetDeprecatedScopeSpans())
+	assert.Nil(t, rss[0].GetDeprecatedScopeSpans())
 }

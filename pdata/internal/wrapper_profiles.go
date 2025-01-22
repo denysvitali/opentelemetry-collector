@@ -30,17 +30,18 @@ func NewProfiles(orig *otlpcollectorprofile.ExportProfilesServiceRequest, state 
 }
 
 // ProfilesToProto internal helper to convert Profiles to protobuf representation.
-func ProfilesToProto(l Profiles) otlpprofile.ProfilesData {
-	return otlpprofile.ProfilesData{
-		ResourceProfiles: l.orig.ResourceProfiles,
-	}
+func ProfilesToProto(l Profiles) *otlpprofile.ProfilesData {
+	return otlpprofile.ProfilesData_builder{
+		ResourceProfiles: l.orig.GetResourceProfiles(),
+	}.Build()
 }
 
 // ProfilesFromProto internal helper to convert protobuf representation to Profiles.
 // This function set exclusive state assuming that it's called only once per Profiles.
-func ProfilesFromProto(orig otlpprofile.ProfilesData) Profiles {
+func ProfilesFromProto(orig *otlpprofile.ProfilesData) Profiles {
 	state := StateMutable
-	return NewProfiles(&otlpcollectorprofile.ExportProfilesServiceRequest{
-		ResourceProfiles: orig.ResourceProfiles,
-	}, &state)
+	return NewProfiles(
+		otlpcollectorprofile.ExportProfilesServiceRequest_builder{
+			ResourceProfiles: orig.GetResourceProfiles(),
+		}.Build(), &state)
 }

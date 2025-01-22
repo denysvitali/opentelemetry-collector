@@ -11,6 +11,7 @@ var plogotlp = &Package{
 		name: "plogotlp",
 		path: filepath.Join("plog", "plogotlp"),
 		imports: []string{
+			`otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"`,
 			`otlpcollectorlog "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/logs/v1"`,
 		},
 		testImports: []string{

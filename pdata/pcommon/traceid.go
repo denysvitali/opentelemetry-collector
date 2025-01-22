@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/collector/pdata/internal/data"
 )
 
-var emptyTraceID = TraceID([16]byte{})
+var emptyTraceID = TraceID([]byte{})
 
 // TraceID is a trace identifier.
-type TraceID [16]byte
+type TraceID []byte
 
 // NewTraceIDEmpty returns a new empty (all zero bytes) TraceID.
 func NewTraceIDEmpty() TraceID {

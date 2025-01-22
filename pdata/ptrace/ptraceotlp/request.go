@@ -6,6 +6,8 @@ package ptraceotlp // import "go.opentelemetry.io/collector/pdata/ptrace/ptraceo
 import (
 	"bytes"
 
+	"google.golang.org/protobuf/proto"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
 	"go.opentelemetry.io/collector/pdata/internal/json"
@@ -26,7 +28,7 @@ type ExportRequest struct {
 func NewExportRequest() ExportRequest {
 	state := internal.StateMutable
 	return ExportRequest{
-		orig:  &otlpcollectortrace.ExportTraceServiceRequest{},
+		orig:  otlpcollectortrace.ExportTraceServiceRequest_builder{}.Build(),
 		state: &state,
 	}
 }
@@ -43,15 +45,15 @@ func NewExportRequestFromTraces(td ptrace.Traces) ExportRequest {
 
 // MarshalProto marshals ExportRequest into proto bytes.
 func (ms ExportRequest) MarshalProto() ([]byte, error) {
-	return ms.orig.Marshal()
+	return proto.Marshal(ms.orig)
 }
 
 // UnmarshalProto unmarshalls ExportRequest from proto bytes.
 func (ms ExportRequest) UnmarshalProto(data []byte) error {
-	if err := ms.orig.Unmarshal(data); err != nil {
+	if err := proto.Unmarshal(data, ms.orig); err != nil {
 		return err
 	}
-	otlp.MigrateTraces(ms.orig.ResourceSpans)
+	otlp.MigrateTraces(ms.orig.GetResourceSpans())
 	return nil
 }
 

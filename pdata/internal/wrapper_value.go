@@ -21,17 +21,20 @@ func GetValueState(ms Value) *State {
 }
 
 func NewValue(orig *otlpcommon.AnyValue, state *State) Value {
+	if orig == nil {
+		orig = &otlpcommon.AnyValue{}
+	}
 	return Value{orig: orig, state: state}
 }
 
 func FillTestValue(dest Value) {
-	dest.orig.Value = &otlpcommon.AnyValue_StringValue{StringValue: "v"}
+	dest.orig.SetStringValue("v")
 }
 
 func GenerateTestValue() Value {
-	var orig otlpcommon.AnyValue
+	var orig *otlpcommon.AnyValue
 	state := StateMutable
-	ms := NewValue(&orig, &state)
+	ms := NewValue(orig, &state)
 	FillTestValue(ms)
 	return ms
 }

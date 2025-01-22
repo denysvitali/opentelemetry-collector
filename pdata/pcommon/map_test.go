@@ -56,8 +56,11 @@ func TestMap(t *testing.T) {
 
 func TestMapReadOnly(t *testing.T) {
 	state := internal.StateReadOnly
-	m := newMap(&[]otlpcommon.KeyValue{
-		{Key: "k1", Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "v1"}}},
+	m := newMap([]*otlpcommon.KeyValue{
+		otlpcommon.KeyValue_builder{
+			Key:   "k1",
+			Value: otlpcommon.AnyValue_builder{StringValue: ref("v1")}.Build(),
+		}.Build(),
 	}, &state)
 
 	assert.Equal(t, 1, m.Len())
@@ -90,6 +93,10 @@ func TestMapReadOnly(t *testing.T) {
 
 	assert.Equal(t, map[string]any{"k1": "v1"}, m.AsRaw())
 	assert.Panics(t, func() { _ = m.FromRaw(map[string]any{"k1": "v1"}) })
+}
+
+func ref[T any](v T) *T {
+	return &v
 }
 
 func TestMapPutEmpty(t *testing.T) {
@@ -177,19 +184,21 @@ func TestMapPutEmptyBytes(t *testing.T) {
 }
 
 func TestMapWithEmpty(t *testing.T) {
-	origWithNil := []otlpcommon.KeyValue{
+	origWithNil := []*otlpcommon.KeyValue{
 		{},
-		{
-			Key:   "test_key",
-			Value: otlpcommon.AnyValue{Value: &otlpcommon.AnyValue_StringValue{StringValue: "test_value"}},
-		},
-		{
+		otlpcommon.KeyValue_builder{
+			Key: "test_key",
+			Value: otlpcommon.AnyValue_builder{
+				StringValue: ref("test_value"),
+			}.Build(),
+		}.Build(),
+		otlpcommon.KeyValue_builder{
 			Key:   "test_key2",
-			Value: otlpcommon.AnyValue{Value: nil},
-		},
+			Value: otlpcommon.AnyValue_builder{}.Build(),
+		}.Build(),
 	}
 	state := internal.StateMutable
-	sm := newMap(&origWithNil, &state)
+	sm := newMap(origWithNil, &state)
 	val, exist := sm.Get("test_key")
 	assert.True(t, exist)
 	assert.EqualValues(t, ValueTypeStr, val.Type())
@@ -408,7 +417,7 @@ func TestMap_CopyTo(t *testing.T) {
 	assert.EqualValues(t, Map(internal.GenerateTestMap()), dest)
 
 	// Test CopyTo with an empty Value in the destination
-	(*dest.getOrig())[0].Value = otlpcommon.AnyValue{}
+	(*dest.getOrig())[0].SetValue(&otlpcommon.AnyValue{})
 	Map(internal.GenerateTestMap()).CopyTo(dest)
 	assert.EqualValues(t, Map(internal.GenerateTestMap()), dest)
 }

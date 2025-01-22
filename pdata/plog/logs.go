@@ -6,6 +6,7 @@ package plog // import "go.opentelemetry.io/collector/pdata/plog"
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectorlog "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/logs/v1"
+	v1 "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
 )
 
 // Logs is the top-level struct that is propagated through the logs pipeline.
@@ -57,7 +58,12 @@ func (ms Logs) LogRecordCount() int {
 
 // ResourceLogs returns the ResourceLogsSlice associated with this Logs.
 func (ms Logs) ResourceLogs() ResourceLogsSlice {
-	return newResourceLogsSlice(&ms.getOrig().ResourceLogs, internal.GetLogsState(internal.Logs(ms)))
+	rl := ms.getOrig().GetResourceLogs()
+	if rl == nil {
+		rl = make([]*v1.ResourceLogs, 0)
+		ms.getOrig().SetResourceLogs(rl)
+	}
+	return newResourceLogsSlice(&rl, internal.GetLogsState(internal.Logs(ms)))
 }
 
 // MarkReadOnly marks the Logs as shared so that no further modifications can be done on it.

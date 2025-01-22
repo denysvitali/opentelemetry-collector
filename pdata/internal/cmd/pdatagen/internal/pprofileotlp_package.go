@@ -11,6 +11,7 @@ var pprofileotlp = &Package{
 		name: "pprofileotlp",
 		path: filepath.Join("pprofile", "pprofileotlp"),
 		imports: []string{
+			`otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"`,
 			`otlpcollectorprofile "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/profiles/v1development"`,
 		},
 		testImports: []string{

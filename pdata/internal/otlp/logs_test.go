@@ -13,20 +13,17 @@ import (
 
 func TestDeprecatedScopeLogs(t *testing.T) {
 	sl := new(otlplogs.ScopeLogs)
-	rls := []*otlplogs.ResourceLogs{
-		{
-			ScopeLogs:           []*otlplogs.ScopeLogs{sl},
-			DeprecatedScopeLogs: []*otlplogs.ScopeLogs{sl},
-		},
-		{
-			ScopeLogs:           []*otlplogs.ScopeLogs{},
-			DeprecatedScopeLogs: []*otlplogs.ScopeLogs{sl},
-		},
-	}
+	rl1 := &otlplogs.ResourceLogs{}
+	rl1.SetScopeLogs([]*otlplogs.ScopeLogs{sl})
+	rl1.SetDeprecatedScopeLogs([]*otlplogs.ScopeLogs{sl})
+
+	rl2 := &otlplogs.ResourceLogs{}
+	rl2.SetDeprecatedScopeLogs([]*otlplogs.ScopeLogs{sl})
+	rls := []*otlplogs.ResourceLogs{rl1, rl2}
 
 	MigrateLogs(rls)
-	assert.Same(t, sl, rls[0].ScopeLogs[0])
-	assert.Same(t, sl, rls[1].ScopeLogs[0])
-	assert.Nil(t, rls[0].DeprecatedScopeLogs)
-	assert.Nil(t, rls[0].DeprecatedScopeLogs)
+	assert.Same(t, sl, rls[0].GetScopeLogs()[0])
+	assert.Same(t, sl, rls[1].GetScopeLogs()[0])
+	assert.Nil(t, rls[0].GetDeprecatedScopeLogs())
+	assert.Nil(t, rls[0].GetDeprecatedScopeLogs())
 }

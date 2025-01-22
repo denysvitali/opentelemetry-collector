@@ -18,7 +18,7 @@ var (
 
 // TraceID is a custom data type that is used for all trace_id fields in OTLP
 // Protobuf messages.
-type TraceID [traceIDSize]byte
+type TraceID []byte
 
 var _ proto.Sizer = (*SpanID)(nil)
 
@@ -30,9 +30,9 @@ func (tid TraceID) Size() int {
 	return traceIDSize
 }
 
-// IsEmpty returns true if id contains at leas one non-zero byte.
+// IsEmpty returns true if id contains at least one non-zero byte.
 func (tid TraceID) IsEmpty() bool {
-	return tid == [traceIDSize]byte{}
+	return len(tid) == 0
 }
 
 // MarshalTo converts trace ID into a binary representation. Called by Protobuf serialization.
@@ -51,7 +51,7 @@ func (tid TraceID) MarshalTo(data []byte) (n int, err error) {
 // Unmarshal inflates this trace ID from binary representation. Called by Protobuf serialization.
 func (tid *TraceID) Unmarshal(data []byte) error {
 	if len(data) == 0 {
-		*tid = [traceIDSize]byte{}
+		*tid = []byte{}
 		return nil
 	}
 
@@ -59,7 +59,8 @@ func (tid *TraceID) Unmarshal(data []byte) error {
 		return errUnmarshalTraceID
 	}
 
-	copy(tid[:], data)
+	*tid = make(TraceID, traceIDSize)
+	copy(*tid, data)
 	return nil
 }
 
@@ -74,6 +75,5 @@ func (tid TraceID) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON inflates trace id from hex string, possibly enclosed in quotes.
 // Called by Protobuf JSON deserialization.
 func (tid *TraceID) UnmarshalJSON(data []byte) error {
-	*tid = [traceIDSize]byte{}
-	return unmarshalJSON(tid[:], data)
+	return unmarshalJSON(*tid, data)
 }

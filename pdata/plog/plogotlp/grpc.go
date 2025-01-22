@@ -80,10 +80,11 @@ func RegisterGRPCServer(s *grpc.Server, srv GRPCServer) {
 
 type rawLogsServer struct {
 	srv GRPCServer
+	otlpcollectorlog.UnimplementedLogsServiceServer
 }
 
 func (s rawLogsServer) Export(ctx context.Context, request *otlpcollectorlog.ExportLogsServiceRequest) (*otlpcollectorlog.ExportLogsServiceResponse, error) {
-	otlp.MigrateLogs(request.ResourceLogs)
+	otlp.MigrateLogs(request.GetResourceLogs())
 	state := internal.StateMutable
 	rsp, err := s.srv.Export(ctx, ExportRequest{orig: request, state: &state})
 	return rsp.orig, err

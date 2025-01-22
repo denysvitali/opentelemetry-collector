@@ -8,11 +8,11 @@ import (
 )
 
 type Slice struct {
-	orig  *[]otlpcommon.AnyValue
+	orig  *[]*otlpcommon.AnyValue
 	state *State
 }
 
-func GetOrigSlice(ms Slice) *[]otlpcommon.AnyValue {
+func GetOrigSlice(ms Slice) *[]*otlpcommon.AnyValue {
 	return ms.orig
 }
 
@@ -20,12 +20,12 @@ func GetSliceState(ms Slice) *State {
 	return ms.state
 }
 
-func NewSlice(orig *[]otlpcommon.AnyValue, state *State) Slice {
+func NewSlice(orig *[]*otlpcommon.AnyValue, state *State) Slice {
 	return Slice{orig: orig, state: state}
 }
 
 func GenerateTestSlice() Slice {
-	orig := []otlpcommon.AnyValue{}
+	var orig []*otlpcommon.AnyValue
 	state := StateMutable
 	tv := NewSlice(&orig, &state)
 	FillTestSlice(tv)
@@ -33,9 +33,9 @@ func GenerateTestSlice() Slice {
 }
 
 func FillTestSlice(tv Slice) {
-	*tv.orig = make([]otlpcommon.AnyValue, 7)
+	*tv.orig = make([]*otlpcommon.AnyValue, 7)
 	for i := 0; i < 7; i++ {
 		state := StateMutable
-		FillTestValue(NewValue(&(*tv.orig)[i], &state))
+		FillTestValue(NewValue((*tv.orig)[i], &state))
 	}
 }

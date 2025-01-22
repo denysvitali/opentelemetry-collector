@@ -1,0 +1,9 @@
+FROM nixos/nix
+RUN nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs-unstable && \
+    nix-channel --update
+RUN nix-env -iA \
+    nixpkgs.protobuf \
+    nixpkgs.protoc-gen-go-grpc \
+    nixpkgs-unstable.protoc-gen-go
+CMD [ "protoc" ]
+ENTRYPOINT [ "protoc" ]

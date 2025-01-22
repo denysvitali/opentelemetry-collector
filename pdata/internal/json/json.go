@@ -6,17 +6,19 @@ package json // import "go.opentelemetry.io/collector/pdata/internal/json"
 import (
 	"io"
 
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
-var marshaler = &jsonpb.Marshaler{
-	// https://github.com/open-telemetry/opentelemetry-specification/pull/2758
-	EnumsAsInts: true,
-	// https://github.com/open-telemetry/opentelemetry-specification/pull/2829
-	OrigName: false,
-}
+var opts = &protojson.MarshalOptions{}
 
 func Marshal(out io.Writer, pb proto.Message) error {
-	return marshaler.Marshal(out, pb)
+	jsonBytes, err := opts.Marshal(pb)
+	if err != nil {
+		return err
+	}
+	if _, err := out.Write(jsonBytes); err != nil {
+		return err
+	}
+	return nil
 }

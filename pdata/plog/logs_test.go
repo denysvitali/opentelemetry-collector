@@ -44,27 +44,27 @@ func TestLogRecordCount(t *testing.T) {
 
 func TestLogRecordCountWithEmpty(t *testing.T) {
 	assert.Zero(t, NewLogs().LogRecordCount())
-	assert.Zero(t, newLogs(&otlpcollectorlog.ExportLogsServiceRequest{
+	assert.Zero(t, newLogs(otlpcollectorlog.ExportLogsServiceRequest_builder{
 		ResourceLogs: []*otlplogs.ResourceLogs{{}},
-	}).LogRecordCount())
-	assert.Zero(t, newLogs(&otlpcollectorlog.ExportLogsServiceRequest{
+	}.Build()).LogRecordCount())
+	assert.Zero(t, newLogs(otlpcollectorlog.ExportLogsServiceRequest_builder{
 		ResourceLogs: []*otlplogs.ResourceLogs{
-			{
+			otlplogs.ResourceLogs_builder{
 				ScopeLogs: []*otlplogs.ScopeLogs{{}},
-			},
+			}.Build(),
 		},
-	}).LogRecordCount())
-	assert.Equal(t, 1, newLogs(&otlpcollectorlog.ExportLogsServiceRequest{
+	}.Build()).LogRecordCount())
+	assert.Equal(t, 1, newLogs(otlpcollectorlog.ExportLogsServiceRequest_builder{
 		ResourceLogs: []*otlplogs.ResourceLogs{
-			{
+			otlplogs.ResourceLogs_builder{
 				ScopeLogs: []*otlplogs.ScopeLogs{
-					{
+					otlplogs.ScopeLogs_builder{
 						LogRecords: []*otlplogs.LogRecord{{}},
-					},
+					}.Build(),
 				},
-			},
+			}.Build(),
 		},
-	}).LogRecordCount())
+	}.Build()).LogRecordCount())
 }
 
 func TestToFromLogOtlp(t *testing.T) {
@@ -164,7 +164,7 @@ func BenchmarkLogsUsage(b *testing.B) {
 				lr.SetSeverityText("info")
 				lr.SetSeverityNumber(SeverityNumberInfo)
 				lr.Attributes().PutStr("foo", "bar")
-				lr.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
+				lr.SetSpanID([]byte{1, 2, 3, 4, 5, 6, 7, 8})
 				sl.LogRecords().RemoveIf(func(lr LogRecord) bool {
 					return lr.Body().Str() == "another_log_record"
 				})

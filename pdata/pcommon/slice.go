@@ -19,11 +19,11 @@ import (
 // Important: zero-initialized instance is not valid for use.
 type Slice internal.Slice
 
-func newSlice(orig *[]otlpcommon.AnyValue, state *internal.State) Slice {
+func newSlice(orig *[]*otlpcommon.AnyValue, state *internal.State) Slice {
 	return Slice(internal.NewSlice(orig, state))
 }
 
-func (es Slice) getOrig() *[]otlpcommon.AnyValue {
+func (es Slice) getOrig() *[]*otlpcommon.AnyValue {
 	return internal.GetOrigSlice(internal.Slice(es))
 }
 
@@ -34,7 +34,7 @@ func (es Slice) getState() *internal.State {
 // NewSlice creates a Slice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewSlice() Slice {
-	orig := []otlpcommon.AnyValue(nil)
+	orig := []*otlpcommon.AnyValue(nil)
 	state := internal.StateMutable
 	return Slice(internal.NewSlice(&orig, &state))
 }
@@ -55,7 +55,7 @@ func (es Slice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es Slice) At(ix int) Value {
-	return newValue(&(*es.getOrig())[ix], es.getState())
+	return newValue((*es.getOrig())[ix], es.getState())
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
@@ -66,11 +66,11 @@ func (es Slice) CopyTo(dest Slice) {
 	if srcLen <= destCap {
 		(*dest.getOrig()) = (*dest.getOrig())[:srcLen:destCap]
 	} else {
-		(*dest.getOrig()) = make([]otlpcommon.AnyValue, srcLen)
+		(*dest.getOrig()) = make([]*otlpcommon.AnyValue, srcLen)
 	}
 
 	for i := range *es.getOrig() {
-		newValue(&(*es.getOrig())[i], es.getState()).CopyTo(newValue(&(*dest.getOrig())[i], dest.getState()))
+		newValue((*es.getOrig())[i], es.getState()).CopyTo(newValue((*dest.getOrig())[i], dest.getState()))
 	}
 }
 
@@ -93,7 +93,7 @@ func (es Slice) EnsureCapacity(newCap int) {
 		return
 	}
 
-	newOrig := make([]otlpcommon.AnyValue, len(*es.getOrig()), newCap)
+	newOrig := make([]*otlpcommon.AnyValue, len(*es.getOrig()), newCap)
 	copy(newOrig, *es.getOrig())
 	*es.getOrig() = newOrig
 }
@@ -102,7 +102,7 @@ func (es Slice) EnsureCapacity(newCap int) {
 // It returns the newly added Value.
 func (es Slice) AppendEmpty() Value {
 	es.getState().AssertMutable()
-	*es.getOrig() = append(*es.getOrig(), otlpcommon.AnyValue{})
+	*es.getOrig() = append(*es.getOrig(), &otlpcommon.AnyValue{})
 	return es.At(es.Len() - 1)
 }
 
@@ -157,9 +157,9 @@ func (es Slice) FromRaw(rawSlice []any) error {
 		return nil
 	}
 	var errs error
-	origs := make([]otlpcommon.AnyValue, len(rawSlice))
+	origs := make([]*otlpcommon.AnyValue, len(rawSlice))
 	for ix, iv := range rawSlice {
-		errs = multierr.Append(errs, newValue(&origs[ix], es.getState()).FromRaw(iv))
+		errs = multierr.Append(errs, newValue(origs[ix], es.getState()).FromRaw(iv))
 	}
 	*es.getOrig() = origs
 	return errs

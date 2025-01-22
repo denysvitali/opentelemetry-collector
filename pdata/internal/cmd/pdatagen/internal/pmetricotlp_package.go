@@ -12,6 +12,7 @@ var pmetricotlp = &Package{
 		name: "pmetricotlp",
 		path: filepath.Join("pmetric", "pmetricotlp"),
 		imports: []string{
+			`otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"`,
 			`otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"`,
 		},
 		testImports: []string{

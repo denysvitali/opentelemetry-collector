@@ -43,27 +43,32 @@ func TestSpanCount(t *testing.T) {
 }
 
 func TestSpanCountWithEmpty(t *testing.T) {
-	assert.EqualValues(t, 0, newTraces(&otlpcollectortrace.ExportTraceServiceRequest{
-		ResourceSpans: []*otlptrace.ResourceSpans{{}},
-	}).SpanCount())
-	assert.EqualValues(t, 0, newTraces(&otlpcollectortrace.ExportTraceServiceRequest{
+	assert.EqualValues(t, 0,
+		newTraces(otlpcollectortrace.ExportTraceServiceRequest_builder{
+			ResourceSpans: []*otlptrace.ResourceSpans{{}},
+		}.Build()).SpanCount())
+	assert.EqualValues(t, 0, newTraces(otlpcollectortrace.ExportTraceServiceRequest_builder{
 		ResourceSpans: []*otlptrace.ResourceSpans{
-			{
+			otlptrace.ResourceSpans_builder{
 				ScopeSpans: []*otlptrace.ScopeSpans{{}},
-			},
+			}.Build(),
 		},
-	}).SpanCount())
-	assert.EqualValues(t, 1, newTraces(&otlpcollectortrace.ExportTraceServiceRequest{
-		ResourceSpans: []*otlptrace.ResourceSpans{
-			{
-				ScopeSpans: []*otlptrace.ScopeSpans{
-					{
-						Spans: []*otlptrace.Span{{}},
-					},
+	}.Build()))
+	assert.EqualValues(t, 1,
+		newTraces(
+			otlpcollectortrace.ExportTraceServiceRequest_builder{
+				ResourceSpans: []*otlptrace.ResourceSpans{
+					otlptrace.ResourceSpans_builder{
+						ScopeSpans: []*otlptrace.ScopeSpans{
+							otlptrace.ScopeSpans_builder{
+								Spans: []*otlptrace.Span{{}},
+							}.Build(),
+						},
+					}.Build(),
 				},
-			},
-		},
-	}).SpanCount())
+			}.Build(),
+		).SpanCount(),
+	)
 }
 
 func TestToFromOtlp(t *testing.T) {
@@ -158,18 +163,18 @@ func BenchmarkTracesUsage(b *testing.B) {
 					assert.Equal(b, ts, s.StartTimestamp())
 					s.SetEndTimestamp(ts)
 					assert.Equal(b, ts, s.EndTimestamp())
-					s.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
-					assert.Equal(b, pcommon.TraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), s.TraceID())
-					s.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-					assert.Equal(b, pcommon.SpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8}), s.SpanID())
+					s.SetTraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
+					assert.Equal(b, pcommon.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), s.TraceID())
+					s.SetSpanID([]byte{1, 2, 3, 4, 5, 6, 7, 8})
+					assert.Equal(b, pcommon.SpanID([]byte{1, 2, 3, 4, 5, 6, 7, 8}), s.SpanID())
 				}
 				s := iss.Spans().AppendEmpty()
 				s.SetName("another_span")
 				s.SetStartTimestamp(ts)
 				s.SetEndTimestamp(ts)
-				s.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
-				s.SetParentSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
-				s.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
+				s.SetTraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
+				s.SetParentSpanID([]byte{1, 2, 3, 4, 5, 6, 7, 8})
+				s.SetSpanID([]byte{1, 2, 3, 4, 5, 6, 7, 8})
 				s.Attributes().PutStr("foo1", "bar1")
 				s.Attributes().PutStr("foo2", "bar2")
 				iss.Spans().RemoveIf(func(lr Span) bool {
