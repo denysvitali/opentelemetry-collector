@@ -9,14 +9,16 @@
 package ptrace
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestScopeSpans_MoveTo(t *testing.T) {
@@ -42,6 +44,7 @@ func TestScopeSpans_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newScopeSpans(&otlptrace.ScopeSpans{}, &sharedState)) })
 }
 
+
 func TestScopeSpans_Scope(t *testing.T) {
 	ms := NewScopeSpans()
 	internal.FillTestInstrumentationScope(internal.InstrumentationScope(ms.Scope()))
@@ -54,9 +57,7 @@ func TestScopeSpans_SchemaUrl(t *testing.T) {
 	ms.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
 	assert.Equal(t, "https://opentelemetry.io/schemas/1.5.0", ms.SchemaUrl())
 	sharedState := internal.StateReadOnly
-	assert.Panics(t, func() {
-		newScopeSpans(&otlptrace.ScopeSpans{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	})
+	assert.Panics(t, func() { newScopeSpans(&otlptrace.ScopeSpans{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0") })
 }
 
 func TestScopeSpans_Spans(t *testing.T) {
@@ -66,6 +67,7 @@ func TestScopeSpans_Spans(t *testing.T) {
 	assert.Equal(t, generateTestSpanSlice(), ms.Spans())
 }
 
+
 func generateTestScopeSpans() ScopeSpans {
 	tv := NewScopeSpans()
 	fillTestScopeSpans(tv)
@@ -74,6 +76,7 @@ func generateTestScopeSpans() ScopeSpans {
 
 func fillTestScopeSpans(tv ScopeSpans) {
 	internal.FillTestInstrumentationScope(internal.NewInstrumentationScope(tv.orig.GetScope(), tv.state))
-	tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestSpanSlice(newSpanSlice(utils.Ref(tv.orig.GetSpans()), tv.state))
+		tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
+	fillTestSpanSlice(newSpanSlice(&{}, tv.state))
 }
+

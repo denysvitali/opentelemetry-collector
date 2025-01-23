@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// SampleSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type SampleSliceAccessor interface {
+	SetSample([]*otlpprofiles.Sample)
+	GetSample() []*otlpprofiles.Sample
+}
 
 // SampleSlice logically represents a slice of Sample.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewSampleSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type SampleSlice struct {
-	orig  *[]*otlpprofiles.Sample
+	orig  SampleSliceAccessor
 	state *internal.State
 }
 
-func newSampleSlice(orig *[]*otlpprofiles.Sample, state *internal.State) SampleSlice {
+func newSampleSlice(orig SampleSliceAccessor, state *internal.State) SampleSlice {
 	return SampleSlice{orig: orig, state: state}
 }
 
 // NewSampleSlice creates a SampleSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewSampleSlice() SampleSlice {
-	orig := []*otlpprofiles.Sample(nil)
 	state := internal.StateMutable
-	return newSampleSlice(&orig, &state)
+	return newSampleSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewSampleSlice()".
 func (es SampleSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetSample())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es SampleSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es SampleSlice) At(i int) Sample {
-	return newSample((*es.orig)[i], es.state)
+	return newSample(es.orig.GetSample()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es SampleSlice) At(i int) Sample {
 //	}
 func (es SampleSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetSample())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.Sample, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.Sample, len(es.orig.GetSample()), newCap)
+	copy(newOrig, es.orig.GetSample())
+	es.orig.SetSample(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Sample.
 // It returns the newly added Sample.
 func (es SampleSlice) AppendEmpty() Sample {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.Sample{})
+	es.orig.SetSample(append(es.orig.GetSample(), &otlpprofiles.Sample{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es SampleSlice) AppendEmpty() Sample {
 func (es SampleSlice) MoveAndAppendTo(dest SampleSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetSample() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetSample(es.orig.GetSample())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetSample(append(dest.orig.GetSample(), es.orig.GetSample()...))
 	}
-	*es.orig = nil
+	es.orig.SetSample(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es SampleSlice) MoveAndAppendTo(dest SampleSlice) {
 func (es SampleSlice) RemoveIf(f func(Sample) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetSample()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es SampleSlice) RemoveIf(f func(Sample) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetSample()[newLen] = es.orig.GetSample()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetSample(es.orig.GetSample()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es SampleSlice) CopyTo(dest SampleSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetSample())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newSample((*es.orig)[i], es.state).CopyTo(newSample((*dest.orig)[i], dest.state))
+		dest.orig.SetSample(dest.orig.GetSample()[:srcLen:destCap])
+		for i := range es.orig.GetSample() {
+			newSample(es.orig.GetSample()[i], es.state).CopyTo(newSample(dest.orig.GetSample()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.Sample, srcLen)
 	wrappers := make([]*otlpprofiles.Sample, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetSample() {
 		wrappers[i] = &origs[i]
-		newSample((*es.orig)[i], es.state).CopyTo(newSample(wrappers[i], dest.state))
+		newSample(es.orig.GetSample()[i], es.state).CopyTo(newSample(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetSample(wrappers)
 }
 
 // Sort sorts the Sample elements within SampleSlice given the
@@ -150,5 +157,5 @@ func (es SampleSlice) CopyTo(dest SampleSlice) {
 // can be compared.
 func (es SampleSlice) Sort(less func(a, b Sample) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetSample(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

@@ -56,6 +56,7 @@ var pprofile = &Package{
 var resourceProfilesSlice = &sliceOfPtrs{
 	structName: "ResourceProfilesSlice",
 	element:    resourceProfiles,
+	parentType: "otlpprofiles.ExportProfileServiceRequest",
 }
 
 var resourceProfiles = &messageValueStruct{
@@ -75,6 +76,7 @@ var resourceProfiles = &messageValueStruct{
 var scopeProfilesSlice = &sliceOfPtrs{
 	structName: "ScopeProfilesSlice",
 	element:    scopeProfiles,
+	parentType: "otlpprofiles.ResourceProfiles",
 }
 
 var scopeProfiles = &messageValueStruct{
@@ -94,6 +96,7 @@ var scopeProfiles = &messageValueStruct{
 var profilesSlice = &sliceOfPtrs{
 	structName: "ProfilesSlice",
 	element:    profile,
+	parentType: "otlpprofiles.ScopeProfiles",
 }
 
 var profile = &messageValueStruct{
@@ -225,6 +228,7 @@ var profile = &messageValueStruct{
 var attributeUnitSlice = &sliceOfPtrs{
 	structName: "AttributeUnitSlice",
 	element:    attributeUnit,
+	parentType: "otlpprofiles.Profile",
 }
 
 var attributeUnit = &messageValueStruct{
@@ -248,8 +252,10 @@ var attributeUnit = &messageValueStruct{
 }
 
 var linkSlice = &sliceOfPtrs{
-	structName: "LinkSlice",
-	element:    link,
+	structName:    "LinkSlice",
+	element:       link,
+	parentType:    "otlpprofile.Profile",
+	fieldAccessor: "LinkTable",
 }
 
 var link = &messageValueStruct{
@@ -263,8 +269,10 @@ var link = &messageValueStruct{
 }
 
 var valueTypeSlice = &sliceOfPtrs{
-	structName: "ValueTypeSlice",
-	element:    valueType,
+	structName:    "ValueTypeSlice",
+	element:       valueType,
+	parentType:    "otlpprofiles.Profile",
+	fieldAccessor: "PeriodType",
 }
 
 var valueType = &messageValueStruct{
@@ -294,8 +302,10 @@ var valueType = &messageValueStruct{
 }
 
 var sampleSlice = &sliceOfPtrs{
-	structName: "SampleSlice",
-	element:    sample,
+	structName:    "SampleSlice",
+	element:       sample,
+	parentType:    "otlpprofiles.Profile",
+	fieldAccessor: "Sample",
 }
 
 var sample = &messageValueStruct{
@@ -331,8 +341,10 @@ var sample = &messageValueStruct{
 }
 
 var mappingSlice = &sliceOfPtrs{
-	structName: "MappingSlice",
-	element:    mapping,
+	structName:    "MappingSlice",
+	element:       mapping,
+	parentType:    "otlpprofiles.Profile",
+	fieldAccessor: "MappingTable",
 }
 
 var mapping = &messageValueStruct{
@@ -396,8 +408,10 @@ var mapping = &messageValueStruct{
 }
 
 var locationSlice = &sliceOfPtrs{
-	structName: "LocationSlice",
-	element:    location,
+	structName:    "LocationSlice",
+	element:       location,
+	parentType:    "otlpprofiles.Profile",
+	fieldAccessor: "LocationTable",
 }
 
 var location = &messageValueStruct{
@@ -435,8 +449,10 @@ var location = &messageValueStruct{
 }
 
 var lineSlice = &sliceOfPtrs{
-	structName: "LineSlice",
-	element:    line,
+	structName:    "LineSlice",
+	element:       line,
+	parentType:    "otlpprofile.Location",
+	fieldAccessor: "Line",
 }
 
 var line = &messageValueStruct{
@@ -466,8 +482,10 @@ var line = &messageValueStruct{
 }
 
 var functionSlice = &sliceOfPtrs{
-	structName: "FunctionSlice",
-	element:    function,
+	structName:    "FunctionSlice",
+	element:       function,
+	parentType:    "otlpprofiles.Profile",
+	fieldAccessor: "FunctionTable",
 }
 
 var function = &messageValueStruct{
@@ -503,8 +521,10 @@ var function = &messageValueStruct{
 }
 
 var attributeTableSlice = &sliceOfValues{
-	structName: "AttributeTableSlice",
-	element:    attribute,
+	structName:    "AttributeTableSlice",
+	element:       attribute,
+	parentType:    "otlpcommon.KeyValueList",
+	fieldAccessor: "Values",
 }
 
 var attribute = &messageValueStruct{

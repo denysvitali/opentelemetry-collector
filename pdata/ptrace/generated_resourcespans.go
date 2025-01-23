@@ -9,11 +9,15 @@
 package ptrace
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // ResourceSpans is a collection of spans from a Resource.
@@ -74,11 +78,7 @@ func (ms ResourceSpans) SetSchemaUrl(v string) {
 // ScopeSpans returns the ScopeSpans associated with this ResourceSpans.
 // accessorSliceTemplate
 func (ms ResourceSpans) ScopeSpans() ScopeSpansSlice {
-	if ms.orig.GetScopeSpans() == nil {
-		ms.orig.SetScopeSpans(utils.GetEmptyPointer(ms.orig.GetScopeSpans()))
-	}
-	sl := ms.orig.GetScopeSpans()
-	return newScopeSpansSlice(&sl, ms.state)
+	return newScopeSpansSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ValueTypeSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ValueTypeSliceAccessor interface {
+	SetPeriodType([]*otlpprofiles.ValueType)
+	GetPeriodType() []*otlpprofiles.ValueType
+}
 
 // ValueTypeSlice logically represents a slice of ValueType.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewValueTypeSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ValueTypeSlice struct {
-	orig  *[]*otlpprofiles.ValueType
+	orig  ValueTypeSliceAccessor
 	state *internal.State
 }
 
-func newValueTypeSlice(orig *[]*otlpprofiles.ValueType, state *internal.State) ValueTypeSlice {
+func newValueTypeSlice(orig ValueTypeSliceAccessor, state *internal.State) ValueTypeSlice {
 	return ValueTypeSlice{orig: orig, state: state}
 }
 
 // NewValueTypeSlice creates a ValueTypeSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewValueTypeSlice() ValueTypeSlice {
-	orig := []*otlpprofiles.ValueType(nil)
 	state := internal.StateMutable
-	return newValueTypeSlice(&orig, &state)
+	return newValueTypeSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewValueTypeSlice()".
 func (es ValueTypeSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetPeriodType())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es ValueTypeSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ValueTypeSlice) At(i int) ValueType {
-	return newValueType((*es.orig)[i], es.state)
+	return newValueType(es.orig.GetPeriodType()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es ValueTypeSlice) At(i int) ValueType {
 //	}
 func (es ValueTypeSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetPeriodType())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.ValueType, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.ValueType, len(es.orig.GetPeriodType()), newCap)
+	copy(newOrig, es.orig.GetPeriodType())
+	es.orig.SetPeriodType(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty ValueType.
 // It returns the newly added ValueType.
 func (es ValueTypeSlice) AppendEmpty() ValueType {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.ValueType{})
+	es.orig.SetPeriodType(append(es.orig.GetPeriodType(), &otlpprofiles.ValueType{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es ValueTypeSlice) AppendEmpty() ValueType {
 func (es ValueTypeSlice) MoveAndAppendTo(dest ValueTypeSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetPeriodType() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetPeriodType(es.orig.GetPeriodType())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetPeriodType(append(dest.orig.GetPeriodType(), es.orig.GetPeriodType()...))
 	}
-	*es.orig = nil
+	es.orig.SetPeriodType(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es ValueTypeSlice) MoveAndAppendTo(dest ValueTypeSlice) {
 func (es ValueTypeSlice) RemoveIf(f func(ValueType) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetPeriodType()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es ValueTypeSlice) RemoveIf(f func(ValueType) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetPeriodType()[newLen] = es.orig.GetPeriodType()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetPeriodType(es.orig.GetPeriodType()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ValueTypeSlice) CopyTo(dest ValueTypeSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetPeriodType())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newValueType((*es.orig)[i], es.state).CopyTo(newValueType((*dest.orig)[i], dest.state))
+		dest.orig.SetPeriodType(dest.orig.GetPeriodType()[:srcLen:destCap])
+		for i := range es.orig.GetPeriodType() {
+			newValueType(es.orig.GetPeriodType()[i], es.state).CopyTo(newValueType(dest.orig.GetPeriodType()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.ValueType, srcLen)
 	wrappers := make([]*otlpprofiles.ValueType, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetPeriodType() {
 		wrappers[i] = &origs[i]
-		newValueType((*es.orig)[i], es.state).CopyTo(newValueType(wrappers[i], dest.state))
+		newValueType(es.orig.GetPeriodType()[i], es.state).CopyTo(newValueType(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetPeriodType(wrappers)
 }
 
 // Sort sorts the ValueType elements within ValueTypeSlice given the
@@ -150,5 +157,5 @@ func (es ValueTypeSlice) CopyTo(dest ValueTypeSlice) {
 // can be compared.
 func (es ValueTypeSlice) Sort(less func(a, b ValueType) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetPeriodType(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

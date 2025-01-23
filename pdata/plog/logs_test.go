@@ -4,6 +4,8 @@
 package plog
 
 import (
+	"os"
+	"runtime/pprof"
 	"testing"
 	"time"
 
@@ -31,6 +33,15 @@ func TestLogRecordCount(t *testing.T) {
 	ill.LogRecords().AppendEmpty()
 	assert.EqualValues(t, 1, logs.LogRecordCount())
 
+	// Take a heap dump
+	f, err := os.Create("heap.pprof")
+	if err != nil {
+		t.Fatalf("create file: %v", err)
+	}
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		t.Fatalf("write heap profile: %v", err)
+	}
+	f.Close()
 	rms := logs.ResourceLogs()
 	rms.EnsureCapacity(3)
 	rms.AppendEmpty().ScopeLogs().AppendEmpty()
@@ -40,6 +51,37 @@ func TestLogRecordCount(t *testing.T) {
 	}
 	// 5 + 1 (from rms.At(0) initialized first)
 	assert.EqualValues(t, 6, logs.LogRecordCount())
+}
+
+func TestLogsSlice(t *testing.T) {
+	logs := NewLogs()
+	rl := logs.ResourceLogs()
+	rl1 := rl.AppendEmpty()
+	rl.AppendEmpty()
+	assert.Len(t, rl.orig.GetResourceLogs(), 2)
+
+	sl := rl1.ScopeLogs()
+	sl1 := sl.AppendEmpty()
+	sl2 := sl.AppendEmpty()
+	assert.Len(t, *sl.orig, 2)
+
+	sl1.SetSchemaUrl("https://example.com/schema-1.json")
+	sl2.SetSchemaUrl("https://example.com/schema-2.json")
+
+	assert.Equal(t, "https://example.com/schema-1.json", sl1.SchemaUrl())
+	assert.Equal(t, "https://example.com/schema-2.json", sl2.SchemaUrl())
+
+	lr := sl1.LogRecords()
+	lr1 := lr.AppendEmpty()
+	lr2 := lr.AppendEmpty()
+
+	lr1.Body().SetStr("Hello world")
+	lr2.Body().SetStr("How are you doing?")
+
+	assert.Len(t, *lr.orig, 2)
+
+	assert.Equal(t, "Hello world", lr1.Body().Str())
+	assert.Equal(t, "How are you doing?", lr2.Body().Str())
 }
 
 func TestLogRecordCountWithEmpty(t *testing.T) {

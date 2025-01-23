@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestValueTypeSlice(t *testing.T) {
 	es := NewValueTypeSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newValueTypeSlice(&[]*otlpprofiles.ValueType{}, &state)
+	es = newValueTypeSlice(&otlpprofiles.Profile{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewValueType()
@@ -38,7 +39,7 @@ func TestValueTypeSlice(t *testing.T) {
 
 func TestValueTypeSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newValueTypeSlice(&[]*otlpprofiles.ValueType{}, &sharedState)
+	es := newValueTypeSlice(&otlpprofiles.Profile{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestValueTypeSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetPeriodType()))
 	assert.Equal(t, generateTestValueTypeSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestValueTypeSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetPeriodType()))
 	assert.Equal(t, generateTestValueTypeSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestValueTypeSlice() ValueTypeSlice {
 }
 
 func fillTestValueTypeSlice(es ValueTypeSlice) {
-	*es.orig = make([]*otlpprofiles.ValueType, 7)
+	es.orig.SetPeriodType(make([]*otlpprofiles.ValueType, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.ValueType{}
-		fillTestValueType(newValueType((*es.orig)[i], es.state))
+		es.orig.GetPeriodType()[i] = &otlpprofiles.ValueType{}
+		fillTestValueType(newValueType(es.orig.GetPeriodType()[i], es.state))
 	}
 }

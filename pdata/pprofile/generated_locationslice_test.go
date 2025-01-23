@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestLocationSlice(t *testing.T) {
 	es := NewLocationSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newLocationSlice(&[]*otlpprofiles.Location{}, &state)
+	es = newLocationSlice(&otlpprofiles.Profile{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewLocation()
@@ -38,7 +39,7 @@ func TestLocationSlice(t *testing.T) {
 
 func TestLocationSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newLocationSlice(&[]*otlpprofiles.Location{}, &sharedState)
+	es := newLocationSlice(&otlpprofiles.Profile{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestLocationSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetLocationTable()))
 	assert.Equal(t, generateTestLocationSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestLocationSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetLocationTable()))
 	assert.Equal(t, generateTestLocationSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestLocationSlice() LocationSlice {
 }
 
 func fillTestLocationSlice(es LocationSlice) {
-	*es.orig = make([]*otlpprofiles.Location, 7)
+	es.orig.SetLocationTable(make([]*otlpprofiles.Location, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.Location{}
-		fillTestLocation(newLocation((*es.orig)[i], es.state))
+		es.orig.GetLocationTable()[i] = &otlpprofiles.Location{}
+		fillTestLocation(newLocation(es.orig.GetLocationTable()[i], es.state))
 	}
 }

@@ -60,6 +60,7 @@ var pmetric = &Package{
 var resourceMetricsSlice = &sliceOfPtrs{
 	structName: "ResourceMetricsSlice",
 	element:    resourceMetrics,
+	parentType: "otelmetrics.MetricsData",
 }
 
 var resourceMetrics = &messageValueStruct{
@@ -79,6 +80,7 @@ var resourceMetrics = &messageValueStruct{
 var scopeMetricsSlice = &sliceOfPtrs{
 	structName: "ScopeMetricsSlice",
 	element:    scopeMetrics,
+	parentType: "otlpmetrics.ResourceMetrics",
 }
 
 var scopeMetrics = &messageValueStruct{
@@ -98,6 +100,7 @@ var scopeMetrics = &messageValueStruct{
 var metricSlice = &sliceOfPtrs{
 	structName: "MetricSlice",
 	element:    metric,
+	parentType: "otlpmetrics.ScopeMetrics",
 }
 
 var metric = &messageValueStruct{
@@ -225,8 +228,10 @@ var summary = &messageValueStruct{
 }
 
 var numberDataPointSlice = &sliceOfPtrs{
-	structName: "NumberDataPointSlice",
-	element:    numberDataPoint,
+	structName:    "NumberDataPointSlice",
+	element:       numberDataPoint,
+	parentType:    "otlpmetrics.Sum",
+	fieldAccessor: "DataPoints",
 }
 
 var numberDataPoint = &messageValueStruct{
@@ -266,6 +271,7 @@ var numberDataPoint = &messageValueStruct{
 var histogramDataPointSlice = &sliceOfPtrs{
 	structName: "HistogramDataPointSlice",
 	element:    histogramDataPoint,
+	parentType: "otlpmetric.Histogram",
 }
 
 var histogramDataPoint = &messageValueStruct{
@@ -290,6 +296,7 @@ var histogramDataPoint = &messageValueStruct{
 var exponentialHistogramDataPointSlice = &sliceOfPtrs{
 	structName: "ExponentialHistogramDataPointSlice",
 	element:    exponentialHistogramDataPoint,
+	parentType: "otlpmetric.ExponentialHistogram",
 }
 
 var exponentialHistogramDataPoint = &messageValueStruct{
@@ -354,8 +361,10 @@ var bucketsValues = &messageValueStruct{
 }
 
 var summaryDataPointSlice = &sliceOfPtrs{
-	structName: "SummaryDataPointSlice",
-	element:    summaryDataPoint,
+	structName:    "SummaryDataPointSlice",
+	element:       summaryDataPoint,
+	parentType:    "otlpmetrics.Summary",
+	fieldAccessor: "DataPoints",
 }
 
 var summaryDataPoint = &messageValueStruct{
@@ -377,8 +386,10 @@ var summaryDataPoint = &messageValueStruct{
 }
 
 var quantileValuesSlice = &sliceOfPtrs{
-	structName: "SummaryDataPointValueAtQuantileSlice",
-	element:    quantileValues,
+	structName:    "SummaryDataPointValueAtQuantileSlice",
+	element:       quantileValues,
+	parentType:    "otlpmetrics.SummaryDataPoint",
+	fieldAccessor: "QuantileValues",
 }
 
 var quantileValues = &messageValueStruct{
@@ -394,6 +405,7 @@ var quantileValues = &messageValueStruct{
 var exemplarSlice = &sliceOfValues{
 	structName: "ExemplarSlice",
 	element:    exemplar,
+	parentType: "otlpmetrics.HistogramDataPoint",
 }
 
 var exemplar = &messageValueStruct{

@@ -10,10 +10,10 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // ScopeProfiles is a collection of profiles from a LibraryInstrumentation.
@@ -74,11 +74,7 @@ func (ms ScopeProfiles) SetSchemaUrl(v string) {
 // Profiles returns the Profiles associated with this ScopeProfiles.
 // accessorSliceTemplate
 func (ms ScopeProfiles) Profiles() ProfilesSlice {
-	if ms.orig.GetProfiles() == nil {
-		ms.orig.SetProfiles(utils.GetEmptyPointer(ms.orig.GetProfiles()))
-	}
-	sl := ms.orig.GetProfiles()
-	return newProfilesSlice(&sl, ms.state)
+	return newProfilesSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

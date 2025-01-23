@@ -12,11 +12,6 @@ import (
 const accessorSliceTemplate = `// {{ .fieldName }} returns the {{ .originFieldName }} associated with this {{ .structName }}.
 // accessorSliceTemplate
 func (ms {{ .structName }}) {{ .fieldName }}() {{ .packageName }}{{ .returnType }} {
-	if ms.{{ .origAccessor }}.Get{{ .fieldName }}() == nil {
-		{{- if ne .element nil }}
-		ms.{{ .origAccessor }}.Set{{ .fieldName }}(utils.GetEmptyPointer(ms.{{ .origAccessor }}.Get{{ .fieldName }}()))
-		{{- end -}}
-	}
 	{{- if .isCommon }}
 	return {{ .packageName }}{{ .returnType }}(internal.New{{ .returnType }}(
 	{{- if .isSlice -}}
@@ -33,8 +28,7 @@ func (ms {{ .structName }}) {{ .fieldName }}() {{ .packageName }}{{ .returnType 
 	{{- end -}}
 	))
 	{{- else }}
-	sl := ms.{{ .origAccessor }}.Get{{ .fieldName }}()
-	return new{{ .returnType }}(&sl, ms.state)
+	return new{{ .returnType }}(ms.{{ .origAccessor }}, ms.state)
 	{{- end }}
 }`
 
@@ -58,11 +52,9 @@ const setTestValueTemplate = `{{ if .isCommon -}}
 	{{-	end -}}
 	{{ .returnType }}(
 	{{- if .isSlice -}}
-	utils.Ref(
-	{{- end -}}
+	&{{ .newType }}{}
+	{{- else -}}
 	tv.orig.Get{{ .originFieldName }}()
-	{{- if .isSlice -}}
-	)
 	{{- end -}}
 	, tv.state))`
 
@@ -107,7 +99,7 @@ func (ms {{ .structName }}) Set{{ .fieldName }}(v {{ .returnType }}) {
 const accessorsPrimitiveSliceTemplate = `// {{ .fieldName }} returns the {{ .lowerFieldName }} associated with this {{ .structName }}.
 // accessorsPrimitiveSliceTemplate
 func (ms {{ .structName }}) {{ .fieldName }}() {{ .packageName }}{{ .returnType }} {
-	return {{ .packageName }}{{ .returnType }}(internal.New{{ .returnType }}(utils.Ref(ms.{{ .origAccessor }}.Get{{ .fieldName }}()), ms.state))
+	return {{ .packageName }}{{ .returnType }}(internal.New{{ .returnType }}(ms.{{ .origAccessor }}.Get{{ .fieldName }}(), ms.state))
 }`
 
 const oneOfTypeAccessorTemplate = `// {{ .typeFuncName }} returns the type of the {{ .lowerOriginFieldName }} for this {{ .structName }}.
@@ -313,6 +305,7 @@ type sliceField struct {
 	fieldName       string
 	originFieldName string
 	returnSlice     baseSlice
+	newType         string
 }
 
 func (sf *sliceField) GenerateAccessors(ms *messageValueStruct) string {
@@ -374,6 +367,7 @@ func (sf *sliceField) templateFields(ms *messageValueStruct) map[string]any {
 		}(),
 		"element": element,
 		"isSlice": true,
+		"newType": sf.newType,
 	}
 }
 

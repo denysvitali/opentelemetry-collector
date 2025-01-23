@@ -9,12 +9,14 @@
 package plog
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // LogRecord are experimental implementation of OpenTelemetry Log Data Model.
@@ -153,9 +155,6 @@ func (ms LogRecord) Body() pcommon.Value {
 // Attributes returns the Attributes associated with this LogRecord.
 // accessorSliceTemplate
 func (ms LogRecord) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 

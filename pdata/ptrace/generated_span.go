@@ -9,11 +9,15 @@
 package ptrace
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Span represents a single operation within a trace.
@@ -150,9 +154,6 @@ func (ms Span) SetEndTimestamp(v pcommon.Timestamp) {
 // Attributes returns the Attributes associated with this Span.
 // accessorSliceTemplate
 func (ms Span) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 
@@ -171,11 +172,7 @@ func (ms Span) SetDroppedAttributesCount(v uint32) {
 // Events returns the Events associated with this Span.
 // accessorSliceTemplate
 func (ms Span) Events() SpanEventSlice {
-	if ms.orig.GetEvents() == nil {
-		ms.orig.SetEvents(utils.GetEmptyPointer(ms.orig.GetEvents()))
-	}
-	sl := ms.orig.GetEvents()
-	return newSpanEventSlice(&sl, ms.state)
+	return newSpanEventSlice(ms.orig, ms.state)
 }
 
 // DroppedEventsCount returns the droppedeventscount associated with this Span.
@@ -193,11 +190,7 @@ func (ms Span) SetDroppedEventsCount(v uint32) {
 // Links returns the Links associated with this Span.
 // accessorSliceTemplate
 func (ms Span) Links() SpanLinkSlice {
-	if ms.orig.GetLinks() == nil {
-		ms.orig.SetLinks(utils.GetEmptyPointer(ms.orig.GetLinks()))
-	}
-	sl := ms.orig.GetLinks()
-	return newSpanLinkSlice(&sl, ms.state)
+	return newSpanLinkSlice(ms.orig, ms.state)
 }
 
 // DroppedLinksCount returns the droppedlinkscount associated with this Span.

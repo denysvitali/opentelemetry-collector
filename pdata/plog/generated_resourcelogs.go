@@ -9,11 +9,14 @@
 package plog
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // ResourceLogs is a collection of logs from a Resource.
@@ -74,11 +77,7 @@ func (ms ResourceLogs) SetSchemaUrl(v string) {
 // ScopeLogs returns the ScopeLogs associated with this ResourceLogs.
 // accessorSliceTemplate
 func (ms ResourceLogs) ScopeLogs() ScopeLogsSlice {
-	if ms.orig.GetScopeLogs() == nil {
-		ms.orig.SetScopeLogs(utils.GetEmptyPointer(ms.orig.GetScopeLogs()))
-	}
-	sl := ms.orig.GetScopeLogs()
-	return newScopeLogsSlice(&sl, ms.state)
+	return newScopeLogsSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

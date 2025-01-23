@@ -10,9 +10,10 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Location describes function and line table debug information.
@@ -87,11 +88,7 @@ func (ms Location) SetAddress(v uint64) {
 // Line returns the Line associated with this Location.
 // accessorSliceTemplate
 func (ms Location) Line() LineSlice {
-	if ms.orig.GetLine() == nil {
-		ms.orig.SetLine(utils.GetEmptyPointer(ms.orig.GetLine()))
-	}
-	sl := ms.orig.GetLine()
-	return newLineSlice(&sl, ms.state)
+	return newLineSlice(ms.orig, ms.state)
 }
 
 // IsFolded returns the isfolded associated with this Location.
@@ -109,8 +106,6 @@ func (ms Location) SetIsFolded(v bool) {
 // AttributeIndices returns the AttributeIndices associated with this Location.
 // accessorSliceTemplate
 func (ms Location) AttributeIndices() pcommon.Int32Slice {
-	if ms.orig.GetAttributeIndices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetAttributeIndices()), ms.state))
 }
 

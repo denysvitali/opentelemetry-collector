@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestLogRecordSlice(t *testing.T) {
 	es := NewLogRecordSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newLogRecordSlice(&[]*otlplogs.LogRecord{}, &state)
+	es = newLogRecordSlice(&otlplogs.ScopeLogs{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewLogRecord()
@@ -38,7 +40,7 @@ func TestLogRecordSlice(t *testing.T) {
 
 func TestLogRecordSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newLogRecordSlice(&[]*otlplogs.LogRecord{}, &sharedState)
+	es := newLogRecordSlice(&otlplogs.ScopeLogs{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestLogRecordSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetLogRecords()))
 	assert.Equal(t, generateTestLogRecordSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestLogRecordSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetLogRecords()))
 	assert.Equal(t, generateTestLogRecordSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestLogRecordSlice() LogRecordSlice {
 }
 
 func fillTestLogRecordSlice(es LogRecordSlice) {
-	*es.orig = make([]*otlplogs.LogRecord, 7)
+	es.orig.SetLogRecords(make([]*otlplogs.LogRecord, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlplogs.LogRecord{}
-		fillTestLogRecord(newLogRecord((*es.orig)[i], es.state))
+		es.orig.GetLogRecords()[i] = &otlplogs.LogRecord{}
+		fillTestLogRecord(newLogRecord(es.orig.GetLogRecords()[i], es.state))
 	}
 }

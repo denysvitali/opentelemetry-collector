@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSpanLinkSlice(t *testing.T) {
 	es := NewSpanLinkSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSpanLinkSlice(&[]*otlptrace.Span_Link{}, &state)
+	es = newSpanLinkSlice(&otlptrace.Span{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSpanLink()
@@ -38,7 +40,7 @@ func TestSpanLinkSlice(t *testing.T) {
 
 func TestSpanLinkSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSpanLinkSlice(&[]*otlptrace.Span_Link{}, &sharedState)
+	es := newSpanLinkSlice(&otlptrace.Span{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestSpanLinkSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetSpanLinks()))
 	assert.Equal(t, generateTestSpanLinkSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSpanLinkSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetSpanLinks()))
 	assert.Equal(t, generateTestSpanLinkSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestSpanLinkSlice() SpanLinkSlice {
 }
 
 func fillTestSpanLinkSlice(es SpanLinkSlice) {
-	*es.orig = make([]*otlptrace.Span_Link, 7)
+	es.orig.SetSpanLinks(make([]*otlptrace.Span_Link, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlptrace.Span_Link{}
-		fillTestSpanLink(newSpanLink((*es.orig)[i], es.state))
+		es.orig.GetSpanLinks()[i] = &otlptrace.Span_Link{}
+		fillTestSpanLink(newSpanLink(es.orig.GetSpanLinks()[i], es.state))
 	}
 }

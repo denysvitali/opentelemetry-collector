@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceSpansSlice(t *testing.T) {
 	es := NewResourceSpansSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newResourceSpansSlice(&[]*otlptrace.ResourceSpans{}, &state)
+	es = newResourceSpansSlice(&otlpcollectortrace.ExportTraceServiceRequest{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewResourceSpans()
@@ -38,7 +40,7 @@ func TestResourceSpansSlice(t *testing.T) {
 
 func TestResourceSpansSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newResourceSpansSlice(&[]*otlptrace.ResourceSpans{}, &sharedState)
+	es := newResourceSpansSlice(&otlpcollectortrace.ExportTraceServiceRequest{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestResourceSpansSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetResourceSpans()))
 	assert.Equal(t, generateTestResourceSpansSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestResourceSpansSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetResourceSpans()))
 	assert.Equal(t, generateTestResourceSpansSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestResourceSpansSlice() ResourceSpansSlice {
 }
 
 func fillTestResourceSpansSlice(es ResourceSpansSlice) {
-	*es.orig = make([]*otlptrace.ResourceSpans, 7)
+	es.orig.SetResourceSpans(make([]*otlptrace.ResourceSpans, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlptrace.ResourceSpans{}
-		fillTestResourceSpans(newResourceSpans((*es.orig)[i], es.state))
+		es.orig.GetResourceSpans()[i] = &otlptrace.ResourceSpans{}
+		fillTestResourceSpans(newResourceSpans(es.orig.GetResourceSpans()[i], es.state))
 	}
 }

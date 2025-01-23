@@ -10,9 +10,10 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Sample represents each record value encountered within a profiled program.
@@ -76,24 +77,18 @@ func (ms Sample) SetLocationsLength(v int32) {
 // Value returns the Value associated with this Sample.
 // accessorSliceTemplate
 func (ms Sample) Value() pcommon.Int64Slice {
-	if ms.orig.GetValue() == nil {
-	}
 	return pcommon.Int64Slice(internal.NewInt64Slice(utils.Ref(ms.orig.GetValue()), ms.state))
 }
 
 // AttributeIndices returns the AttributeIndices associated with this Sample.
 // accessorSliceTemplate
 func (ms Sample) AttributeIndices() pcommon.Int32Slice {
-	if ms.orig.GetAttributeIndices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetAttributeIndices()), ms.state))
 }
 
 // TimestampsUnixNano returns the TimestampsUnixNano associated with this Sample.
 // accessorSliceTemplate
 func (ms Sample) TimestampsUnixNano() pcommon.UInt64Slice {
-	if ms.orig.GetTimestampsUnixNano() == nil {
-	}
 	return pcommon.UInt64Slice(internal.NewUInt64Slice(utils.Ref(ms.orig.GetTimestampsUnixNano()), ms.state))
 }
 

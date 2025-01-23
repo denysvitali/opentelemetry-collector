@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceMetricsSlice(t *testing.T) {
 	es := NewResourceMetricsSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newResourceMetricsSlice(&[]*otlpmetrics.ResourceMetrics{}, &state)
+	es = newResourceMetricsSlice(&otelmetrics.MetricsData{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewResourceMetrics()
@@ -38,7 +40,7 @@ func TestResourceMetricsSlice(t *testing.T) {
 
 func TestResourceMetricsSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newResourceMetricsSlice(&[]*otlpmetrics.ResourceMetrics{}, &sharedState)
+	es := newResourceMetricsSlice(&otelmetrics.MetricsData{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestResourceMetricsSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetResourceMetrics()))
 	assert.Equal(t, generateTestResourceMetricsSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestResourceMetricsSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetResourceMetrics()))
 	assert.Equal(t, generateTestResourceMetricsSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestResourceMetricsSlice() ResourceMetricsSlice {
 }
 
 func fillTestResourceMetricsSlice(es ResourceMetricsSlice) {
-	*es.orig = make([]*otlpmetrics.ResourceMetrics, 7)
+	es.orig.SetResourceMetrics(make([]*otlpmetrics.ResourceMetrics, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.ResourceMetrics{}
-		fillTestResourceMetrics(newResourceMetrics((*es.orig)[i], es.state))
+		es.orig.GetResourceMetrics()[i] = &otlpmetrics.ResourceMetrics{}
+		fillTestResourceMetrics(newResourceMetrics(es.orig.GetResourceMetrics()[i], es.state))
 	}
 }

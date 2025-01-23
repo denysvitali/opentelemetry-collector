@@ -102,6 +102,7 @@ var endTimeField = &primitiveTypedField{
 var attributes = &sliceField{
 	fieldName:   "Attributes",
 	returnSlice: attributesPtrs,
+	newType:     "[]*otlpcommon.KeyValue",
 }
 
 var nameField = &primitiveField{

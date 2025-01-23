@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceProfilesSlice(t *testing.T) {
 	es := NewResourceProfilesSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newResourceProfilesSlice(&[]*otlpprofiles.ResourceProfiles{}, &state)
+	es = newResourceProfilesSlice(&otlpprofiles.ExportProfileServiceRequest{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewResourceProfiles()
@@ -38,7 +39,7 @@ func TestResourceProfilesSlice(t *testing.T) {
 
 func TestResourceProfilesSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newResourceProfilesSlice(&[]*otlpprofiles.ResourceProfiles{}, &sharedState)
+	es := newResourceProfilesSlice(&otlpprofiles.ExportProfileServiceRequest{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestResourceProfilesSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetResourceProfiles()))
 	assert.Equal(t, generateTestResourceProfilesSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestResourceProfilesSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetResourceProfiles()))
 	assert.Equal(t, generateTestResourceProfilesSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestResourceProfilesSlice() ResourceProfilesSlice {
 }
 
 func fillTestResourceProfilesSlice(es ResourceProfilesSlice) {
-	*es.orig = make([]*otlpprofiles.ResourceProfiles, 7)
+	es.orig.SetResourceProfiles(make([]*otlpprofiles.ResourceProfiles, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.ResourceProfiles{}
-		fillTestResourceProfiles(newResourceProfiles((*es.orig)[i], es.state))
+		es.orig.GetResourceProfiles()[i] = &otlpprofiles.ResourceProfiles{}
+		fillTestResourceProfiles(newResourceProfiles(es.orig.GetResourceProfiles()[i], es.state))
 	}
 }

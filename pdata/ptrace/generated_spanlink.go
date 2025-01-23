@@ -9,11 +9,15 @@
 package ptrace
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // SpanLink is a pointer from the current span to another span in the same trace or in a
@@ -95,9 +99,6 @@ func (ms SpanLink) SetFlags(v uint32) {
 // Attributes returns the Attributes associated with this SpanLink.
 // accessorSliceTemplate
 func (ms SpanLink) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 

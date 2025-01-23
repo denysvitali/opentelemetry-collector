@@ -10,18 +10,20 @@ package pprofile
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
-	v1 "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestAttributeTableSlice(t *testing.T) {
 	es := NewAttributeTableSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newAttributeTableSlice(&[]*v1.KeyValue{}, &state)
+	es = newAttributeTableSlice(&otlpcommon.KeyValueList{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewAttribute()
@@ -37,7 +39,7 @@ func TestAttributeTableSlice(t *testing.T) {
 
 func TestAttributeTableSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newAttributeTableSlice(&[]*v1.KeyValue{}, &sharedState)
+	es := newAttributeTableSlice(&otlpcommon.KeyValueList{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -70,14 +72,14 @@ func TestAttributeTableSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetValues()))
 	assert.Equal(t, generateTestAttributeTableSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestAttributeTableSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetValues()))
 	assert.Equal(t, generateTestAttributeTableSlice(), es)
 }
 
@@ -131,9 +133,9 @@ func generateTestAttributeTableSlice() AttributeTableSlice {
 }
 
 func fillTestAttributeTableSlice(es AttributeTableSlice) {
-	*es.orig = make([]*v1.KeyValue, 7)
+	es.orig.SetValues(make([]*v1.KeyValue, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &v1.KeyValue{}
-		fillTestAttribute(newAttribute((*es.orig)[i], es.state))
+		es.orig.GetValues()[i] = &v1.KeyValue{}
+		fillTestAttribute(newAttribute(es.orig.GetValues()[i], es.state))
 	}
 }

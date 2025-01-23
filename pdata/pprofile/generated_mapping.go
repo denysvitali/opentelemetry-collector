@@ -10,9 +10,10 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Mapping describes the mapping of a binary in memory, including its address range, file offset, and metadata like build ID
@@ -100,8 +101,6 @@ func (ms Mapping) SetFilenameStrindex(v int32) {
 // AttributeIndices returns the AttributeIndices associated with this Mapping.
 // accessorSliceTemplate
 func (ms Mapping) AttributeIndices() pcommon.Int32Slice {
-	if ms.orig.GetAttributeIndices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetAttributeIndices()), ms.state))
 }
 

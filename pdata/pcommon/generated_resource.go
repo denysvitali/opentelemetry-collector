@@ -10,8 +10,8 @@ package pcommon
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Resource is a message representing the resource information.
@@ -56,9 +56,6 @@ func (ms Resource) getState() *internal.State {
 // Attributes returns the Attributes associated with this Resource.
 // accessorSliceTemplate
 func (ms Resource) Attributes() Map {
-	if ms.getOrig().GetAttributes() == nil {
-		ms.getOrig().SetAttributes(utils.GetEmptyPointer(ms.getOrig().GetAttributes()))
-	}
 	return Map(internal.NewMap(utils.Ref(ms.getOrig().GetAttributes()), internal.GetResourceState(internal.Resource(ms))))
 }
 

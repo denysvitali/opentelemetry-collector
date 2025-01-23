@@ -9,11 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
 	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Exemplar is a sample input double measurement.
@@ -101,8 +104,6 @@ func (ms Exemplar) SetIntValue(v int64) {
 // FilteredAttributes returns the FilteredAttributes associated with this Exemplar.
 // accessorSliceTemplate
 func (ms Exemplar) FilteredAttributes() pcommon.Map {
-	if ms.orig.GetFilteredAttributes() == nil {
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetFilteredAttributes()), ms.state))
 }
 

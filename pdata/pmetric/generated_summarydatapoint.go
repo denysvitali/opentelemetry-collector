@@ -9,10 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // SummaryDataPoint is a single data point in a timeseries that describes the time-varying values of a Summary of double values.
@@ -52,9 +56,6 @@ func (ms SummaryDataPoint) MoveTo(dest SummaryDataPoint) {
 // Attributes returns the Attributes associated with this SummaryDataPoint.
 // accessorSliceTemplate
 func (ms SummaryDataPoint) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 
@@ -107,11 +108,7 @@ func (ms SummaryDataPoint) SetSum(v float64) {
 // QuantileValues returns the QuantileValues associated with this SummaryDataPoint.
 // accessorSliceTemplate
 func (ms SummaryDataPoint) QuantileValues() SummaryDataPointValueAtQuantileSlice {
-	if ms.orig.GetQuantileValues() == nil {
-		ms.orig.SetQuantileValues(utils.GetEmptyPointer(ms.orig.GetQuantileValues()))
-	}
-	sl := ms.orig.GetQuantileValues()
-	return newSummaryDataPointValueAtQuantileSlice(&sl, ms.state)
+	return newSummaryDataPointValueAtQuantileSlice(ms.orig, ms.state)
 }
 
 // Flags returns the flags associated with this SummaryDataPoint.

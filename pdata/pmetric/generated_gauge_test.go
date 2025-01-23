@@ -9,13 +9,16 @@
 package pmetric
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestGauge_MoveTo(t *testing.T) {
@@ -41,12 +44,14 @@ func TestGauge_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newGauge(&otlpmetrics.Gauge{}, &sharedState)) })
 }
 
+
 func TestGauge_DataPoints(t *testing.T) {
 	ms := NewGauge()
 	assert.Equal(t, NewNumberDataPointSlice(), ms.DataPoints())
 	fillTestNumberDataPointSlice(ms.DataPoints())
 	assert.Equal(t, generateTestNumberDataPointSlice(), ms.DataPoints())
 }
+
 
 func generateTestGauge() Gauge {
 	tv := NewGauge()
@@ -55,5 +60,6 @@ func generateTestGauge() Gauge {
 }
 
 func fillTestGauge(tv Gauge) {
-	fillTestNumberDataPointSlice(newNumberDataPointSlice(utils.Ref(tv.orig.GetDataPoints()), tv.state))
+	fillTestNumberDataPointSlice(newNumberDataPointSlice(&{}, tv.state))
 }
+

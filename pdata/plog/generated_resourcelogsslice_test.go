@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceLogsSlice(t *testing.T) {
 	es := NewResourceLogsSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newResourceLogsSlice(&[]*otlplogs.ResourceLogs{}, &state)
+	es = newResourceLogsSlice(&otlplogs.LogsData{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewResourceLogs()
@@ -38,7 +40,7 @@ func TestResourceLogsSlice(t *testing.T) {
 
 func TestResourceLogsSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newResourceLogsSlice(&[]*otlplogs.ResourceLogs{}, &sharedState)
+	es := newResourceLogsSlice(&otlplogs.LogsData{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestResourceLogsSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetResourceLogs()))
 	assert.Equal(t, generateTestResourceLogsSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestResourceLogsSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetResourceLogs()))
 	assert.Equal(t, generateTestResourceLogsSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestResourceLogsSlice() ResourceLogsSlice {
 }
 
 func fillTestResourceLogsSlice(es ResourceLogsSlice) {
-	*es.orig = make([]*otlplogs.ResourceLogs, 7)
+	es.orig.SetResourceLogs(make([]*otlplogs.ResourceLogs, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlplogs.ResourceLogs{}
-		fillTestResourceLogs(newResourceLogs((*es.orig)[i], es.state))
+		es.orig.GetResourceLogs()[i] = &otlplogs.ResourceLogs{}
+		fillTestResourceLogs(newResourceLogs(es.orig.GetResourceLogs()[i], es.state))
 	}
 }

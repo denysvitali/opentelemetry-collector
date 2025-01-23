@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestScopeMetricsSlice(t *testing.T) {
 	es := NewScopeMetricsSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newScopeMetricsSlice(&[]*otlpmetrics.ScopeMetrics{}, &state)
+	es = newScopeMetricsSlice(&otlpmetrics.ResourceMetrics{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewScopeMetrics()
@@ -38,7 +40,7 @@ func TestScopeMetricsSlice(t *testing.T) {
 
 func TestScopeMetricsSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newScopeMetricsSlice(&[]*otlpmetrics.ScopeMetrics{}, &sharedState)
+	es := newScopeMetricsSlice(&otlpmetrics.ResourceMetrics{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestScopeMetricsSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetScopeMetrics()))
 	assert.Equal(t, generateTestScopeMetricsSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestScopeMetricsSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetScopeMetrics()))
 	assert.Equal(t, generateTestScopeMetricsSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestScopeMetricsSlice() ScopeMetricsSlice {
 }
 
 func fillTestScopeMetricsSlice(es ScopeMetricsSlice) {
-	*es.orig = make([]*otlpmetrics.ScopeMetrics, 7)
+	es.orig.SetScopeMetrics(make([]*otlpmetrics.ScopeMetrics, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.ScopeMetrics{}
-		fillTestScopeMetrics(newScopeMetrics((*es.orig)[i], es.state))
+		es.orig.GetScopeMetrics()[i] = &otlpmetrics.ScopeMetrics{}
+		fillTestScopeMetrics(newScopeMetrics(es.orig.GetScopeMetrics()[i], es.state))
 	}
 }

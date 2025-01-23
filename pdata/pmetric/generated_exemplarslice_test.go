@@ -10,18 +10,21 @@ package pmetric
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestExemplarSlice(t *testing.T) {
 	es := NewExemplarSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newExemplarSlice(&[]*otlpmetrics.Exemplar{}, &state)
+	es = newExemplarSlice(&otlpmetrics.HistogramDataPoint{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewExemplar()
@@ -37,7 +40,7 @@ func TestExemplarSlice(t *testing.T) {
 
 func TestExemplarSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newExemplarSlice(&[]*otlpmetrics.Exemplar{}, &sharedState)
+	es := newExemplarSlice(&otlpmetrics.HistogramDataPoint{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -70,14 +73,14 @@ func TestExemplarSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetExemplars()))
 	assert.Equal(t, generateTestExemplarSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestExemplarSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetExemplars()))
 	assert.Equal(t, generateTestExemplarSlice(), es)
 }
 
@@ -131,9 +134,9 @@ func generateTestExemplarSlice() ExemplarSlice {
 }
 
 func fillTestExemplarSlice(es ExemplarSlice) {
-	*es.orig = make([]*otlpmetrics.Exemplar, 7)
+	es.orig.SetExemplars(make([]*otlpmetrics.Exemplar, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.Exemplar{}
-		fillTestExemplar(newExemplar((*es.orig)[i], es.state))
+		es.orig.GetExemplars()[i] = &otlpmetrics.Exemplar{}
+		fillTestExemplar(newExemplar(es.orig.GetExemplars()[i], es.state))
 	}
 }

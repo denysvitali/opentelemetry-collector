@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestMetricSlice(t *testing.T) {
 	es := NewMetricSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newMetricSlice(&[]*otlpmetrics.Metric{}, &state)
+	es = newMetricSlice(&otlpmetrics.ScopeMetrics{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewMetric()
@@ -38,7 +40,7 @@ func TestMetricSlice(t *testing.T) {
 
 func TestMetricSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newMetricSlice(&[]*otlpmetrics.Metric{}, &sharedState)
+	es := newMetricSlice(&otlpmetrics.ScopeMetrics{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestMetricSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetMetrics()))
 	assert.Equal(t, generateTestMetricSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestMetricSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetMetrics()))
 	assert.Equal(t, generateTestMetricSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestMetricSlice() MetricSlice {
 }
 
 func fillTestMetricSlice(es MetricSlice) {
-	*es.orig = make([]*otlpmetrics.Metric, 7)
+	es.orig.SetMetrics(make([]*otlpmetrics.Metric, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.Metric{}
-		fillTestMetric(newMetric((*es.orig)[i], es.state))
+		es.orig.GetMetrics()[i] = &otlpmetrics.Metric{}
+		fillTestMetric(newMetric(es.orig.GetMetrics()[i], es.state))
 	}
 }

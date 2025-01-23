@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSummaryDataPointSlice(t *testing.T) {
 	es := NewSummaryDataPointSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSummaryDataPointSlice(&[]*otlpmetrics.SummaryDataPoint{}, &state)
+	es = newSummaryDataPointSlice(&otlpmetrics.Summary{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSummaryDataPoint()
@@ -38,7 +40,7 @@ func TestSummaryDataPointSlice(t *testing.T) {
 
 func TestSummaryDataPointSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSummaryDataPointSlice(&[]*otlpmetrics.SummaryDataPoint{}, &sharedState)
+	es := newSummaryDataPointSlice(&otlpmetrics.Summary{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestSummaryDataPointSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetDataPoints()))
 	assert.Equal(t, generateTestSummaryDataPointSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSummaryDataPointSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetDataPoints()))
 	assert.Equal(t, generateTestSummaryDataPointSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestSummaryDataPointSlice() SummaryDataPointSlice {
 }
 
 func fillTestSummaryDataPointSlice(es SummaryDataPointSlice) {
-	*es.orig = make([]*otlpmetrics.SummaryDataPoint, 7)
+	es.orig.SetDataPoints(make([]*otlpmetrics.SummaryDataPoint, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.SummaryDataPoint{}
-		fillTestSummaryDataPoint(newSummaryDataPoint((*es.orig)[i], es.state))
+		es.orig.GetDataPoints()[i] = &otlpmetrics.SummaryDataPoint{}
+		fillTestSummaryDataPoint(newSummaryDataPoint(es.orig.GetDataPoints()[i], es.state))
 	}
 }

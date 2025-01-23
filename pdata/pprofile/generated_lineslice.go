@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// LineSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type LineSliceAccessor interface {
+	SetLine([]*otlpprofiles.Line)
+	GetLine() []*otlpprofiles.Line
+}
 
 // LineSlice logically represents a slice of Line.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewLineSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type LineSlice struct {
-	orig  *[]*otlpprofiles.Line
+	orig  LineSliceAccessor
 	state *internal.State
 }
 
-func newLineSlice(orig *[]*otlpprofiles.Line, state *internal.State) LineSlice {
+func newLineSlice(orig LineSliceAccessor, state *internal.State) LineSlice {
 	return LineSlice{orig: orig, state: state}
 }
 
 // NewLineSlice creates a LineSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewLineSlice() LineSlice {
-	orig := []*otlpprofiles.Line(nil)
 	state := internal.StateMutable
-	return newLineSlice(&orig, &state)
+	return newLineSlice(&otlpprofile.Location{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewLineSlice()".
 func (es LineSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetLine())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es LineSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es LineSlice) At(i int) Line {
-	return newLine((*es.orig)[i], es.state)
+	return newLine(es.orig.GetLine()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es LineSlice) At(i int) Line {
 //	}
 func (es LineSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetLine())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.Line, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.Line, len(es.orig.GetLine()), newCap)
+	copy(newOrig, es.orig.GetLine())
+	es.orig.SetLine(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Line.
 // It returns the newly added Line.
 func (es LineSlice) AppendEmpty() Line {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.Line{})
+	es.orig.SetLine(append(es.orig.GetLine(), &otlpprofiles.Line{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es LineSlice) AppendEmpty() Line {
 func (es LineSlice) MoveAndAppendTo(dest LineSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetLine() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetLine(es.orig.GetLine())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetLine(append(dest.orig.GetLine(), es.orig.GetLine()...))
 	}
-	*es.orig = nil
+	es.orig.SetLine(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es LineSlice) MoveAndAppendTo(dest LineSlice) {
 func (es LineSlice) RemoveIf(f func(Line) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetLine()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es LineSlice) RemoveIf(f func(Line) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetLine()[newLen] = es.orig.GetLine()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetLine(es.orig.GetLine()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es LineSlice) CopyTo(dest LineSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetLine())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newLine((*es.orig)[i], es.state).CopyTo(newLine((*dest.orig)[i], dest.state))
+		dest.orig.SetLine(dest.orig.GetLine()[:srcLen:destCap])
+		for i := range es.orig.GetLine() {
+			newLine(es.orig.GetLine()[i], es.state).CopyTo(newLine(dest.orig.GetLine()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.Line, srcLen)
 	wrappers := make([]*otlpprofiles.Line, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetLine() {
 		wrappers[i] = &origs[i]
-		newLine((*es.orig)[i], es.state).CopyTo(newLine(wrappers[i], dest.state))
+		newLine(es.orig.GetLine()[i], es.state).CopyTo(newLine(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetLine(wrappers)
 }
 
 // Sort sorts the Line elements within LineSlice given the
@@ -150,5 +157,5 @@ func (es LineSlice) CopyTo(dest LineSlice) {
 // can be compared.
 func (es LineSlice) Sort(less func(a, b Line) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetLine(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

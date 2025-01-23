@@ -11,7 +11,7 @@ package pcommon
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 )
 
 // InstrumentationScope is a message representing the instrumentation scope information.
@@ -80,9 +80,6 @@ func (ms InstrumentationScope) SetVersion(v string) {
 // Attributes returns the Attributes associated with this InstrumentationScope.
 // accessorSliceTemplate
 func (ms InstrumentationScope) Attributes() Map {
-	if ms.getOrig().GetAttributes() == nil {
-		ms.getOrig().SetAttributes(utils.GetEmptyPointer(ms.getOrig().GetAttributes()))
-	}
 	return Map(internal.NewMap(utils.Ref(ms.getOrig().GetAttributes()), internal.GetInstrumentationScopeState(internal.InstrumentationScope(ms))))
 }
 

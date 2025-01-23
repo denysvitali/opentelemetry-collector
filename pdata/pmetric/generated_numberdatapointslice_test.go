@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestNumberDataPointSlice(t *testing.T) {
 	es := NewNumberDataPointSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newNumberDataPointSlice(&[]*otlpmetrics.NumberDataPoint{}, &state)
+	es = newNumberDataPointSlice(&otlpmetrics.Sum{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewNumberDataPoint()
@@ -38,7 +40,7 @@ func TestNumberDataPointSlice(t *testing.T) {
 
 func TestNumberDataPointSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newNumberDataPointSlice(&[]*otlpmetrics.NumberDataPoint{}, &sharedState)
+	es := newNumberDataPointSlice(&otlpmetrics.Sum{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestNumberDataPointSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetDataPoints()))
 	assert.Equal(t, generateTestNumberDataPointSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestNumberDataPointSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetDataPoints()))
 	assert.Equal(t, generateTestNumberDataPointSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestNumberDataPointSlice() NumberDataPointSlice {
 }
 
 func fillTestNumberDataPointSlice(es NumberDataPointSlice) {
-	*es.orig = make([]*otlpmetrics.NumberDataPoint, 7)
+	es.orig.SetDataPoints(make([]*otlpmetrics.NumberDataPoint, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.NumberDataPoint{}
-		fillTestNumberDataPoint(newNumberDataPoint((*es.orig)[i], es.state))
+		es.orig.GetDataPoints()[i] = &otlpmetrics.NumberDataPoint{}
+		fillTestNumberDataPoint(newNumberDataPoint(es.orig.GetDataPoints()[i], es.state))
 	}
 }

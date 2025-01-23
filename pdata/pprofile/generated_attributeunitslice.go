@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// AttributeUnitSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type AttributeUnitSliceAccessor interface {
+	SetAttributeUnits([]*otlpprofiles.AttributeUnit)
+	GetAttributeUnits() []*otlpprofiles.AttributeUnit
+}
 
 // AttributeUnitSlice logically represents a slice of AttributeUnit.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewAttributeUnitSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type AttributeUnitSlice struct {
-	orig  *[]*otlpprofiles.AttributeUnit
+	orig  AttributeUnitSliceAccessor
 	state *internal.State
 }
 
-func newAttributeUnitSlice(orig *[]*otlpprofiles.AttributeUnit, state *internal.State) AttributeUnitSlice {
+func newAttributeUnitSlice(orig AttributeUnitSliceAccessor, state *internal.State) AttributeUnitSlice {
 	return AttributeUnitSlice{orig: orig, state: state}
 }
 
 // NewAttributeUnitSlice creates a AttributeUnitSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewAttributeUnitSlice() AttributeUnitSlice {
-	orig := []*otlpprofiles.AttributeUnit(nil)
 	state := internal.StateMutable
-	return newAttributeUnitSlice(&orig, &state)
+	return newAttributeUnitSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewAttributeUnitSlice()".
 func (es AttributeUnitSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetAttributeUnits())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es AttributeUnitSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es AttributeUnitSlice) At(i int) AttributeUnit {
-	return newAttributeUnit((*es.orig)[i], es.state)
+	return newAttributeUnit(es.orig.GetAttributeUnits()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es AttributeUnitSlice) At(i int) AttributeUnit {
 //	}
 func (es AttributeUnitSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetAttributeUnits())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.AttributeUnit, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.AttributeUnit, len(es.orig.GetAttributeUnits()), newCap)
+	copy(newOrig, es.orig.GetAttributeUnits())
+	es.orig.SetAttributeUnits(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty AttributeUnit.
 // It returns the newly added AttributeUnit.
 func (es AttributeUnitSlice) AppendEmpty() AttributeUnit {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.AttributeUnit{})
+	es.orig.SetAttributeUnits(append(es.orig.GetAttributeUnits(), &otlpprofiles.AttributeUnit{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es AttributeUnitSlice) AppendEmpty() AttributeUnit {
 func (es AttributeUnitSlice) MoveAndAppendTo(dest AttributeUnitSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetAttributeUnits() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetAttributeUnits(es.orig.GetAttributeUnits())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetAttributeUnits(append(dest.orig.GetAttributeUnits(), es.orig.GetAttributeUnits()...))
 	}
-	*es.orig = nil
+	es.orig.SetAttributeUnits(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es AttributeUnitSlice) MoveAndAppendTo(dest AttributeUnitSlice) {
 func (es AttributeUnitSlice) RemoveIf(f func(AttributeUnit) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetAttributeUnits()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es AttributeUnitSlice) RemoveIf(f func(AttributeUnit) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetAttributeUnits()[newLen] = es.orig.GetAttributeUnits()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetAttributeUnits(es.orig.GetAttributeUnits()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es AttributeUnitSlice) CopyTo(dest AttributeUnitSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetAttributeUnits())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newAttributeUnit((*es.orig)[i], es.state).CopyTo(newAttributeUnit((*dest.orig)[i], dest.state))
+		dest.orig.SetAttributeUnits(dest.orig.GetAttributeUnits()[:srcLen:destCap])
+		for i := range es.orig.GetAttributeUnits() {
+			newAttributeUnit(es.orig.GetAttributeUnits()[i], es.state).CopyTo(newAttributeUnit(dest.orig.GetAttributeUnits()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.AttributeUnit, srcLen)
 	wrappers := make([]*otlpprofiles.AttributeUnit, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetAttributeUnits() {
 		wrappers[i] = &origs[i]
-		newAttributeUnit((*es.orig)[i], es.state).CopyTo(newAttributeUnit(wrappers[i], dest.state))
+		newAttributeUnit(es.orig.GetAttributeUnits()[i], es.state).CopyTo(newAttributeUnit(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetAttributeUnits(wrappers)
 }
 
 // Sort sorts the AttributeUnit elements within AttributeUnitSlice given the
@@ -150,5 +157,5 @@ func (es AttributeUnitSlice) CopyTo(dest AttributeUnitSlice) {
 // can be compared.
 func (es AttributeUnitSlice) Sort(less func(a, b AttributeUnit) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetAttributeUnits(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

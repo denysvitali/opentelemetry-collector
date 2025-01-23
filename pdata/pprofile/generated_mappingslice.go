@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// MappingSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type MappingSliceAccessor interface {
+	SetMappingTable([]*otlpprofiles.Mapping)
+	GetMappingTable() []*otlpprofiles.Mapping
+}
 
 // MappingSlice logically represents a slice of Mapping.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewMappingSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type MappingSlice struct {
-	orig  *[]*otlpprofiles.Mapping
+	orig  MappingSliceAccessor
 	state *internal.State
 }
 
-func newMappingSlice(orig *[]*otlpprofiles.Mapping, state *internal.State) MappingSlice {
+func newMappingSlice(orig MappingSliceAccessor, state *internal.State) MappingSlice {
 	return MappingSlice{orig: orig, state: state}
 }
 
 // NewMappingSlice creates a MappingSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewMappingSlice() MappingSlice {
-	orig := []*otlpprofiles.Mapping(nil)
 	state := internal.StateMutable
-	return newMappingSlice(&orig, &state)
+	return newMappingSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewMappingSlice()".
 func (es MappingSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetMappingTable())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es MappingSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es MappingSlice) At(i int) Mapping {
-	return newMapping((*es.orig)[i], es.state)
+	return newMapping(es.orig.GetMappingTable()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es MappingSlice) At(i int) Mapping {
 //	}
 func (es MappingSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetMappingTable())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.Mapping, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.Mapping, len(es.orig.GetMappingTable()), newCap)
+	copy(newOrig, es.orig.GetMappingTable())
+	es.orig.SetMappingTable(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Mapping.
 // It returns the newly added Mapping.
 func (es MappingSlice) AppendEmpty() Mapping {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.Mapping{})
+	es.orig.SetMappingTable(append(es.orig.GetMappingTable(), &otlpprofiles.Mapping{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es MappingSlice) AppendEmpty() Mapping {
 func (es MappingSlice) MoveAndAppendTo(dest MappingSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetMappingTable() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetMappingTable(es.orig.GetMappingTable())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetMappingTable(append(dest.orig.GetMappingTable(), es.orig.GetMappingTable()...))
 	}
-	*es.orig = nil
+	es.orig.SetMappingTable(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es MappingSlice) MoveAndAppendTo(dest MappingSlice) {
 func (es MappingSlice) RemoveIf(f func(Mapping) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetMappingTable()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es MappingSlice) RemoveIf(f func(Mapping) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetMappingTable()[newLen] = es.orig.GetMappingTable()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetMappingTable(es.orig.GetMappingTable()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es MappingSlice) CopyTo(dest MappingSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetMappingTable())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newMapping((*es.orig)[i], es.state).CopyTo(newMapping((*dest.orig)[i], dest.state))
+		dest.orig.SetMappingTable(dest.orig.GetMappingTable()[:srcLen:destCap])
+		for i := range es.orig.GetMappingTable() {
+			newMapping(es.orig.GetMappingTable()[i], es.state).CopyTo(newMapping(dest.orig.GetMappingTable()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.Mapping, srcLen)
 	wrappers := make([]*otlpprofiles.Mapping, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetMappingTable() {
 		wrappers[i] = &origs[i]
-		newMapping((*es.orig)[i], es.state).CopyTo(newMapping(wrappers[i], dest.state))
+		newMapping(es.orig.GetMappingTable()[i], es.state).CopyTo(newMapping(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetMappingTable(wrappers)
 }
 
 // Sort sorts the Mapping elements within MappingSlice given the
@@ -150,5 +157,5 @@ func (es MappingSlice) CopyTo(dest MappingSlice) {
 // can be compared.
 func (es MappingSlice) Sort(less func(a, b Mapping) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetMappingTable(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

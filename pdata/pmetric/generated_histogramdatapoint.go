@@ -9,10 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // HistogramDataPoint is a single data point in a timeseries that describes the time-varying values of a Histogram of values.
@@ -52,9 +56,6 @@ func (ms HistogramDataPoint) MoveTo(dest HistogramDataPoint) {
 // Attributes returns the Attributes associated with this HistogramDataPoint.
 // accessorSliceTemplate
 func (ms HistogramDataPoint) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 
@@ -95,22 +96,19 @@ func (ms HistogramDataPoint) SetCount(v uint64) {
 // BucketCounts returns the bucketcounts associated with this HistogramDataPoint.
 // accessorsPrimitiveSliceTemplate
 func (ms HistogramDataPoint) BucketCounts() pcommon.UInt64Slice {
-	return pcommon.UInt64Slice(internal.NewUInt64Slice(utils.Ref(ms.orig.GetBucketCounts()), ms.state))
+	return pcommon.UInt64Slice(internal.NewUInt64Slice(ms.orig.GetBucketCounts(), ms.state))
 }
 
 // ExplicitBounds returns the explicitbounds associated with this HistogramDataPoint.
 // accessorsPrimitiveSliceTemplate
 func (ms HistogramDataPoint) ExplicitBounds() pcommon.Float64Slice {
-	return pcommon.Float64Slice(internal.NewFloat64Slice(utils.Ref(ms.orig.GetExplicitBounds()), ms.state))
+	return pcommon.Float64Slice(internal.NewFloat64Slice(ms.orig.GetExplicitBounds(), ms.state))
 }
 
 // Exemplars returns the Exemplars associated with this HistogramDataPoint.
 // accessorSliceTemplate
 func (ms HistogramDataPoint) Exemplars() ExemplarSlice {
-	if ms.orig.GetExemplars() == nil {
-	}
-	sl := ms.orig.GetExemplars()
-	return newExemplarSlice(&sl, ms.state)
+	return newExemplarSlice(ms.orig, ms.state)
 }
 
 // Flags returns the flags associated with this HistogramDataPoint.

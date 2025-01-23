@@ -12,8 +12,19 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ScopeLogsSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ScopeLogsSliceAccessor interface {
+	SetScopeLogs([]*otlplogs.ScopeLogs)
+	GetScopeLogs() []*otlplogs.ScopeLogs
+}
 
 // ScopeLogsSlice logically represents a slice of ScopeLogs.
 //
@@ -23,27 +34,26 @@ import (
 // Must use NewScopeLogsSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ScopeLogsSlice struct {
-	orig  *[]*otlplogs.ScopeLogs
+	orig  ScopeLogsSliceAccessor
 	state *internal.State
 }
 
-func newScopeLogsSlice(orig *[]*otlplogs.ScopeLogs, state *internal.State) ScopeLogsSlice {
+func newScopeLogsSlice(orig ScopeLogsSliceAccessor, state *internal.State) ScopeLogsSlice {
 	return ScopeLogsSlice{orig: orig, state: state}
 }
 
 // NewScopeLogsSlice creates a ScopeLogsSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewScopeLogsSlice() ScopeLogsSlice {
-	orig := []*otlplogs.ScopeLogs(nil)
 	state := internal.StateMutable
-	return newScopeLogsSlice(&orig, &state)
+	return newScopeLogsSlice(&otlplogs.ResourceLogs{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewScopeLogsSlice()".
 func (es ScopeLogsSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetScopeLogs())
 }
 
 // At returns the element at the given index.
@@ -55,7 +65,7 @@ func (es ScopeLogsSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ScopeLogsSlice) At(i int) ScopeLogs {
-	return newScopeLogs((*es.orig)[i], es.state)
+	return newScopeLogs(es.orig.GetScopeLogs()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +82,21 @@ func (es ScopeLogsSlice) At(i int) ScopeLogs {
 //	}
 func (es ScopeLogsSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetScopeLogs())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlplogs.ScopeLogs, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlplogs.ScopeLogs, len(es.orig.GetScopeLogs()), newCap)
+	copy(newOrig, es.orig.GetScopeLogs())
+	es.orig.SetScopeLogs(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty ScopeLogs.
 // It returns the newly added ScopeLogs.
 func (es ScopeLogsSlice) AppendEmpty() ScopeLogs {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlplogs.ScopeLogs{})
+	es.orig.SetScopeLogs(append(es.orig.GetScopeLogs(), &otlplogs.ScopeLogs{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +105,13 @@ func (es ScopeLogsSlice) AppendEmpty() ScopeLogs {
 func (es ScopeLogsSlice) MoveAndAppendTo(dest ScopeLogsSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetScopeLogs() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetScopeLogs(es.orig.GetScopeLogs())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetScopeLogs(append(dest.orig.GetScopeLogs(), es.orig.GetScopeLogs()...))
 	}
-	*es.orig = nil
+	es.orig.SetScopeLogs(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +119,7 @@ func (es ScopeLogsSlice) MoveAndAppendTo(dest ScopeLogsSlice) {
 func (es ScopeLogsSlice) RemoveIf(f func(ScopeLogs) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetScopeLogs()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +128,31 @@ func (es ScopeLogsSlice) RemoveIf(f func(ScopeLogs) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetScopeLogs()[newLen] = es.orig.GetScopeLogs()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetScopeLogs(es.orig.GetScopeLogs()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ScopeLogsSlice) CopyTo(dest ScopeLogsSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetScopeLogs())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newScopeLogs((*es.orig)[i], es.state).CopyTo(newScopeLogs((*dest.orig)[i], dest.state))
+		dest.orig.SetScopeLogs(dest.orig.GetScopeLogs()[:srcLen:destCap])
+		for i := range es.orig.GetScopeLogs() {
+			newScopeLogs(es.orig.GetScopeLogs()[i], es.state).CopyTo(newScopeLogs(dest.orig.GetScopeLogs()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlplogs.ScopeLogs, srcLen)
 	wrappers := make([]*otlplogs.ScopeLogs, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetScopeLogs() {
 		wrappers[i] = &origs[i]
-		newScopeLogs((*es.orig)[i], es.state).CopyTo(newScopeLogs(wrappers[i], dest.state))
+		newScopeLogs(es.orig.GetScopeLogs()[i], es.state).CopyTo(newScopeLogs(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetScopeLogs(wrappers)
 }
 
 // Sort sorts the ScopeLogs elements within ScopeLogsSlice given the
@@ -150,5 +160,5 @@ func (es ScopeLogsSlice) CopyTo(dest ScopeLogsSlice) {
 // can be compared.
 func (es ScopeLogsSlice) Sort(less func(a, b ScopeLogs) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetScopeLogs(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

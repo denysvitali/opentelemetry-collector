@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestHistogramDataPointSlice(t *testing.T) {
 	es := NewHistogramDataPointSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newHistogramDataPointSlice(&[]*otlpmetrics.HistogramDataPoint{}, &state)
+	es = newHistogramDataPointSlice(&otlpmetric.Histogram{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewHistogramDataPoint()
@@ -38,7 +40,7 @@ func TestHistogramDataPointSlice(t *testing.T) {
 
 func TestHistogramDataPointSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newHistogramDataPointSlice(&[]*otlpmetrics.HistogramDataPoint{}, &sharedState)
+	es := newHistogramDataPointSlice(&otlpmetric.Histogram{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestHistogramDataPointSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetHistogramDataPoints()))
 	assert.Equal(t, generateTestHistogramDataPointSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestHistogramDataPointSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetHistogramDataPoints()))
 	assert.Equal(t, generateTestHistogramDataPointSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestHistogramDataPointSlice() HistogramDataPointSlice {
 }
 
 func fillTestHistogramDataPointSlice(es HistogramDataPointSlice) {
-	*es.orig = make([]*otlpmetrics.HistogramDataPoint, 7)
+	es.orig.SetHistogramDataPoints(make([]*otlpmetrics.HistogramDataPoint, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.HistogramDataPoint{}
-		fillTestHistogramDataPoint(newHistogramDataPoint((*es.orig)[i], es.state))
+		es.orig.GetHistogramDataPoints()[i] = &otlpmetrics.HistogramDataPoint{}
+		fillTestHistogramDataPoint(newHistogramDataPoint(es.orig.GetHistogramDataPoints()[i], es.state))
 	}
 }

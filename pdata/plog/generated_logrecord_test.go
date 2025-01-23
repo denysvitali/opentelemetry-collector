@@ -10,6 +10,7 @@ package plog
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -17,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 func TestLogRecord_MoveTo(t *testing.T) {
@@ -147,6 +147,6 @@ func fillTestLogRecord(tv LogRecord) {
 	tv.orig.SetSeverityText("INFO")
 	tv.orig.SetSeverityNumber(otlplogs.SeverityNumber(5))
 	internal.FillTestValue(internal.NewValue(tv.orig.GetBody(), tv.state))
-	internal.FillTestMap(internal.NewMap(utils.Ref(tv.orig.GetAttributes()), tv.state))
+	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
 	tv.orig.SetDroppedAttributesCount(uint32(17))
 }

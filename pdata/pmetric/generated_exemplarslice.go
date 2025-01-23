@@ -9,9 +9,22 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ExemplarSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ExemplarSliceAccessor interface {
+	SetExemplars([]*otlpmetrics.Exemplar)
+	GetExemplars() []*otlpmetrics.Exemplar
+}
 
 // ExemplarSlice logically represents a slice of Exemplar.
 //
@@ -21,27 +34,26 @@ import (
 // Must use NewExemplarSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ExemplarSlice struct {
-	orig  *[]*otlpmetrics.Exemplar
+	orig  ExemplarSliceAccessor
 	state *internal.State
 }
 
-func newExemplarSlice(orig *[]*otlpmetrics.Exemplar, state *internal.State) ExemplarSlice {
+func newExemplarSlice(orig ExemplarSliceAccessor, state *internal.State) ExemplarSlice {
 	return ExemplarSlice{orig: orig, state: state}
 }
 
 // NewExemplarSlice creates a ExemplarSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewExemplarSlice() ExemplarSlice {
-	orig := []*otlpmetrics.Exemplar(nil)
 	state := internal.StateMutable
-	return newExemplarSlice(&orig, &state)
+	return newExemplarSlice(&otlpmetrics.HistogramDataPoint{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewExemplarSlice()".
 func (es ExemplarSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetExemplars())
 }
 
 // At returns the element at the given index.
@@ -53,7 +65,7 @@ func (es ExemplarSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ExemplarSlice) At(i int) Exemplar {
-	return newExemplar((*es.orig)[i], es.state)
+	return newExemplar(es.orig.GetExemplars()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -70,21 +82,21 @@ func (es ExemplarSlice) At(i int) Exemplar {
 //	}
 func (es ExemplarSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetExemplars())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpmetrics.Exemplar, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpmetrics.Exemplar, len(es.orig.GetExemplars()), newCap)
+	copy(newOrig, es.orig.GetExemplars())
+	es.orig.SetExemplars(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Exemplar.
 // It returns the newly added Exemplar.
 func (es ExemplarSlice) AppendEmpty() Exemplar {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpmetrics.Exemplar{})
+	es.orig.SetExemplars(append(es.orig.GetExemplars(), &otlpmetrics.Exemplar{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -93,13 +105,13 @@ func (es ExemplarSlice) AppendEmpty() Exemplar {
 func (es ExemplarSlice) MoveAndAppendTo(dest ExemplarSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetExemplars() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetExemplars(es.orig.GetExemplars())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetExemplars(append(dest.orig.GetExemplars(), es.orig.GetExemplars()...))
 	}
-	*es.orig = nil
+	es.orig.SetExemplars(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -107,7 +119,7 @@ func (es ExemplarSlice) MoveAndAppendTo(dest ExemplarSlice) {
 func (es ExemplarSlice) RemoveIf(f func(Exemplar) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetExemplars()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -116,23 +128,23 @@ func (es ExemplarSlice) RemoveIf(f func(Exemplar) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetExemplars()[newLen] = es.orig.GetExemplars()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetExemplars(es.orig.GetExemplars()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ExemplarSlice) CopyTo(dest ExemplarSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetExemplars())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
+		dest.orig.SetExemplars(dest.orig.GetExemplars()[:srcLen:destCap])
 	} else {
-		(*dest.orig) = make([]*otlpmetrics.Exemplar, srcLen)
+		(dest.orig).SetExemplars(make([]*otlpmetrics.Exemplar, srcLen))
 	}
-	for i := range *es.orig {
-		newExemplar((*es.orig)[i], es.state).CopyTo(newExemplar((*dest.orig)[i], dest.state))
+	for i := range es.orig.GetExemplars() {
+		newExemplar(es.orig.GetExemplars()[i], es.state).CopyTo(newExemplar(dest.orig.GetExemplars()[i], dest.state))
 	}
 }

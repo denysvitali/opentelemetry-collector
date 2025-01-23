@@ -9,14 +9,16 @@
 package pmetric
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestResourceMetrics_MoveTo(t *testing.T) {
@@ -42,6 +44,7 @@ func TestResourceMetrics_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newResourceMetrics(&otlpmetrics.ResourceMetrics{}, &sharedState)) })
 }
 
+
 func TestResourceMetrics_Resource(t *testing.T) {
 	ms := NewResourceMetrics()
 	internal.FillTestResource(internal.Resource(ms.Resource()))
@@ -54,9 +57,7 @@ func TestResourceMetrics_SchemaUrl(t *testing.T) {
 	ms.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
 	assert.Equal(t, "https://opentelemetry.io/schemas/1.5.0", ms.SchemaUrl())
 	sharedState := internal.StateReadOnly
-	assert.Panics(t, func() {
-		newResourceMetrics(&otlpmetrics.ResourceMetrics{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	})
+	assert.Panics(t, func() { newResourceMetrics(&otlpmetrics.ResourceMetrics{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0") })
 }
 
 func TestResourceMetrics_ScopeMetrics(t *testing.T) {
@@ -66,6 +67,7 @@ func TestResourceMetrics_ScopeMetrics(t *testing.T) {
 	assert.Equal(t, generateTestScopeMetricsSlice(), ms.ScopeMetrics())
 }
 
+
 func generateTestResourceMetrics() ResourceMetrics {
 	tv := NewResourceMetrics()
 	fillTestResourceMetrics(tv)
@@ -74,6 +76,7 @@ func generateTestResourceMetrics() ResourceMetrics {
 
 func fillTestResourceMetrics(tv ResourceMetrics) {
 	internal.FillTestResource(internal.NewResource(tv.orig.GetResource(), tv.state))
-	tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestScopeMetricsSlice(newScopeMetricsSlice(utils.Ref(tv.orig.GetScopeMetrics()), tv.state))
+		tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
+	fillTestScopeMetricsSlice(newScopeMetricsSlice(&{}, tv.state))
 }
+

@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSpanEventSlice(t *testing.T) {
 	es := NewSpanEventSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSpanEventSlice(&[]*otlptrace.Span_Event{}, &state)
+	es = newSpanEventSlice(&otlptrace.Span{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSpanEvent()
@@ -38,7 +40,7 @@ func TestSpanEventSlice(t *testing.T) {
 
 func TestSpanEventSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSpanEventSlice(&[]*otlptrace.Span_Event{}, &sharedState)
+	es := newSpanEventSlice(&otlptrace.Span{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestSpanEventSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetEvents()))
 	assert.Equal(t, generateTestSpanEventSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSpanEventSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetEvents()))
 	assert.Equal(t, generateTestSpanEventSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestSpanEventSlice() SpanEventSlice {
 }
 
 func fillTestSpanEventSlice(es SpanEventSlice) {
-	*es.orig = make([]*otlptrace.Span_Event, 7)
+	es.orig.SetEvents(make([]*otlptrace.Span_Event, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlptrace.Span_Event{}
-		fillTestSpanEvent(newSpanEvent((*es.orig)[i], es.state))
+		es.orig.GetEvents()[i] = &otlptrace.Span_Event{}
+		fillTestSpanEvent(newSpanEvent(es.orig.GetEvents()[i], es.state))
 	}
 }

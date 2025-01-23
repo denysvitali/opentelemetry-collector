@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestScopeSpansSlice(t *testing.T) {
 	es := NewScopeSpansSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newScopeSpansSlice(&[]*otlptrace.ScopeSpans{}, &state)
+	es = newScopeSpansSlice(&otlptrace.ResourceSpans{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewScopeSpans()
@@ -38,7 +40,7 @@ func TestScopeSpansSlice(t *testing.T) {
 
 func TestScopeSpansSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newScopeSpansSlice(&[]*otlptrace.ScopeSpans{}, &sharedState)
+	es := newScopeSpansSlice(&otlptrace.ResourceSpans{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestScopeSpansSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetScopeSpans()))
 	assert.Equal(t, generateTestScopeSpansSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestScopeSpansSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetScopeSpans()))
 	assert.Equal(t, generateTestScopeSpansSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestScopeSpansSlice() ScopeSpansSlice {
 }
 
 func fillTestScopeSpansSlice(es ScopeSpansSlice) {
-	*es.orig = make([]*otlptrace.ScopeSpans, 7)
+	es.orig.SetScopeSpans(make([]*otlptrace.ScopeSpans, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlptrace.ScopeSpans{}
-		fillTestScopeSpans(newScopeSpans((*es.orig)[i], es.state))
+		es.orig.GetScopeSpans()[i] = &otlptrace.ScopeSpans{}
+		fillTestScopeSpans(newScopeSpans(es.orig.GetScopeSpans()[i], es.state))
 	}
 }

@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestAttributeUnitSlice(t *testing.T) {
 	es := NewAttributeUnitSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newAttributeUnitSlice(&[]*otlpprofiles.AttributeUnit{}, &state)
+	es = newAttributeUnitSlice(&otlpprofiles.Profile{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewAttributeUnit()
@@ -38,7 +39,7 @@ func TestAttributeUnitSlice(t *testing.T) {
 
 func TestAttributeUnitSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newAttributeUnitSlice(&[]*otlpprofiles.AttributeUnit{}, &sharedState)
+	es := newAttributeUnitSlice(&otlpprofiles.Profile{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestAttributeUnitSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetAttributeUnits()))
 	assert.Equal(t, generateTestAttributeUnitSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestAttributeUnitSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetAttributeUnits()))
 	assert.Equal(t, generateTestAttributeUnitSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestAttributeUnitSlice() AttributeUnitSlice {
 }
 
 func fillTestAttributeUnitSlice(es AttributeUnitSlice) {
-	*es.orig = make([]*otlpprofiles.AttributeUnit, 7)
+	es.orig.SetAttributeUnits(make([]*otlpprofiles.AttributeUnit, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.AttributeUnit{}
-		fillTestAttributeUnit(newAttributeUnit((*es.orig)[i], es.state))
+		es.orig.GetAttributeUnits()[i] = &otlpprofiles.AttributeUnit{}
+		fillTestAttributeUnit(newAttributeUnit(es.orig.GetAttributeUnits()[i], es.state))
 	}
 }

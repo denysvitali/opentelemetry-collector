@@ -12,8 +12,19 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ResourceMetricsSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ResourceMetricsSliceAccessor interface {
+	SetResourceMetrics([]*otlpmetrics.ResourceMetrics)
+	GetResourceMetrics() []*otlpmetrics.ResourceMetrics
+}
 
 // ResourceMetricsSlice logically represents a slice of ResourceMetrics.
 //
@@ -23,27 +34,26 @@ import (
 // Must use NewResourceMetricsSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ResourceMetricsSlice struct {
-	orig  *[]*otlpmetrics.ResourceMetrics
+	orig  ResourceMetricsSliceAccessor
 	state *internal.State
 }
 
-func newResourceMetricsSlice(orig *[]*otlpmetrics.ResourceMetrics, state *internal.State) ResourceMetricsSlice {
+func newResourceMetricsSlice(orig ResourceMetricsSliceAccessor, state *internal.State) ResourceMetricsSlice {
 	return ResourceMetricsSlice{orig: orig, state: state}
 }
 
 // NewResourceMetricsSlice creates a ResourceMetricsSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewResourceMetricsSlice() ResourceMetricsSlice {
-	orig := []*otlpmetrics.ResourceMetrics(nil)
 	state := internal.StateMutable
-	return newResourceMetricsSlice(&orig, &state)
+	return newResourceMetricsSlice(&otelmetrics.MetricsData{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewResourceMetricsSlice()".
 func (es ResourceMetricsSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetResourceMetrics())
 }
 
 // At returns the element at the given index.
@@ -55,7 +65,7 @@ func (es ResourceMetricsSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ResourceMetricsSlice) At(i int) ResourceMetrics {
-	return newResourceMetrics((*es.orig)[i], es.state)
+	return newResourceMetrics(es.orig.GetResourceMetrics()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +82,21 @@ func (es ResourceMetricsSlice) At(i int) ResourceMetrics {
 //	}
 func (es ResourceMetricsSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetResourceMetrics())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpmetrics.ResourceMetrics, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpmetrics.ResourceMetrics, len(es.orig.GetResourceMetrics()), newCap)
+	copy(newOrig, es.orig.GetResourceMetrics())
+	es.orig.SetResourceMetrics(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty ResourceMetrics.
 // It returns the newly added ResourceMetrics.
 func (es ResourceMetricsSlice) AppendEmpty() ResourceMetrics {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpmetrics.ResourceMetrics{})
+	es.orig.SetResourceMetrics(append(es.orig.GetResourceMetrics(), &otlpmetrics.ResourceMetrics{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +105,13 @@ func (es ResourceMetricsSlice) AppendEmpty() ResourceMetrics {
 func (es ResourceMetricsSlice) MoveAndAppendTo(dest ResourceMetricsSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetResourceMetrics() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetResourceMetrics(es.orig.GetResourceMetrics())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetResourceMetrics(append(dest.orig.GetResourceMetrics(), es.orig.GetResourceMetrics()...))
 	}
-	*es.orig = nil
+	es.orig.SetResourceMetrics(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +119,7 @@ func (es ResourceMetricsSlice) MoveAndAppendTo(dest ResourceMetricsSlice) {
 func (es ResourceMetricsSlice) RemoveIf(f func(ResourceMetrics) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetResourceMetrics()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +128,31 @@ func (es ResourceMetricsSlice) RemoveIf(f func(ResourceMetrics) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetResourceMetrics()[newLen] = es.orig.GetResourceMetrics()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetResourceMetrics(es.orig.GetResourceMetrics()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ResourceMetricsSlice) CopyTo(dest ResourceMetricsSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetResourceMetrics())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newResourceMetrics((*es.orig)[i], es.state).CopyTo(newResourceMetrics((*dest.orig)[i], dest.state))
+		dest.orig.SetResourceMetrics(dest.orig.GetResourceMetrics()[:srcLen:destCap])
+		for i := range es.orig.GetResourceMetrics() {
+			newResourceMetrics(es.orig.GetResourceMetrics()[i], es.state).CopyTo(newResourceMetrics(dest.orig.GetResourceMetrics()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpmetrics.ResourceMetrics, srcLen)
 	wrappers := make([]*otlpmetrics.ResourceMetrics, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetResourceMetrics() {
 		wrappers[i] = &origs[i]
-		newResourceMetrics((*es.orig)[i], es.state).CopyTo(newResourceMetrics(wrappers[i], dest.state))
+		newResourceMetrics(es.orig.GetResourceMetrics()[i], es.state).CopyTo(newResourceMetrics(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetResourceMetrics(wrappers)
 }
 
 // Sort sorts the ResourceMetrics elements within ResourceMetricsSlice given the
@@ -150,5 +160,5 @@ func (es ResourceMetricsSlice) CopyTo(dest ResourceMetricsSlice) {
 // can be compared.
 func (es ResourceMetricsSlice) Sort(less func(a, b ResourceMetrics) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetResourceMetrics(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

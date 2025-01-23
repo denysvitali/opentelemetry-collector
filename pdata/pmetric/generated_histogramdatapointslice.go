@@ -12,8 +12,19 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// HistogramDataPointSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type HistogramDataPointSliceAccessor interface {
+	SetHistogramDataPoints([]*otlpmetrics.HistogramDataPoint)
+	GetHistogramDataPoints() []*otlpmetrics.HistogramDataPoint
+}
 
 // HistogramDataPointSlice logically represents a slice of HistogramDataPoint.
 //
@@ -23,27 +34,26 @@ import (
 // Must use NewHistogramDataPointSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type HistogramDataPointSlice struct {
-	orig  *[]*otlpmetrics.HistogramDataPoint
+	orig  HistogramDataPointSliceAccessor
 	state *internal.State
 }
 
-func newHistogramDataPointSlice(orig *[]*otlpmetrics.HistogramDataPoint, state *internal.State) HistogramDataPointSlice {
+func newHistogramDataPointSlice(orig HistogramDataPointSliceAccessor, state *internal.State) HistogramDataPointSlice {
 	return HistogramDataPointSlice{orig: orig, state: state}
 }
 
 // NewHistogramDataPointSlice creates a HistogramDataPointSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewHistogramDataPointSlice() HistogramDataPointSlice {
-	orig := []*otlpmetrics.HistogramDataPoint(nil)
 	state := internal.StateMutable
-	return newHistogramDataPointSlice(&orig, &state)
+	return newHistogramDataPointSlice(&otlpmetric.Histogram{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewHistogramDataPointSlice()".
 func (es HistogramDataPointSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetHistogramDataPoints())
 }
 
 // At returns the element at the given index.
@@ -55,7 +65,7 @@ func (es HistogramDataPointSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es HistogramDataPointSlice) At(i int) HistogramDataPoint {
-	return newHistogramDataPoint((*es.orig)[i], es.state)
+	return newHistogramDataPoint(es.orig.GetHistogramDataPoints()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +82,21 @@ func (es HistogramDataPointSlice) At(i int) HistogramDataPoint {
 //	}
 func (es HistogramDataPointSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetHistogramDataPoints())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpmetrics.HistogramDataPoint, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpmetrics.HistogramDataPoint, len(es.orig.GetHistogramDataPoints()), newCap)
+	copy(newOrig, es.orig.GetHistogramDataPoints())
+	es.orig.SetHistogramDataPoints(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty HistogramDataPoint.
 // It returns the newly added HistogramDataPoint.
 func (es HistogramDataPointSlice) AppendEmpty() HistogramDataPoint {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpmetrics.HistogramDataPoint{})
+	es.orig.SetHistogramDataPoints(append(es.orig.GetHistogramDataPoints(), &otlpmetrics.HistogramDataPoint{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +105,13 @@ func (es HistogramDataPointSlice) AppendEmpty() HistogramDataPoint {
 func (es HistogramDataPointSlice) MoveAndAppendTo(dest HistogramDataPointSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetHistogramDataPoints() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetHistogramDataPoints(es.orig.GetHistogramDataPoints())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetHistogramDataPoints(append(dest.orig.GetHistogramDataPoints(), es.orig.GetHistogramDataPoints()...))
 	}
-	*es.orig = nil
+	es.orig.SetHistogramDataPoints(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +119,7 @@ func (es HistogramDataPointSlice) MoveAndAppendTo(dest HistogramDataPointSlice) 
 func (es HistogramDataPointSlice) RemoveIf(f func(HistogramDataPoint) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetHistogramDataPoints()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +128,31 @@ func (es HistogramDataPointSlice) RemoveIf(f func(HistogramDataPoint) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetHistogramDataPoints()[newLen] = es.orig.GetHistogramDataPoints()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetHistogramDataPoints(es.orig.GetHistogramDataPoints()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es HistogramDataPointSlice) CopyTo(dest HistogramDataPointSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetHistogramDataPoints())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newHistogramDataPoint((*es.orig)[i], es.state).CopyTo(newHistogramDataPoint((*dest.orig)[i], dest.state))
+		dest.orig.SetHistogramDataPoints(dest.orig.GetHistogramDataPoints()[:srcLen:destCap])
+		for i := range es.orig.GetHistogramDataPoints() {
+			newHistogramDataPoint(es.orig.GetHistogramDataPoints()[i], es.state).CopyTo(newHistogramDataPoint(dest.orig.GetHistogramDataPoints()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpmetrics.HistogramDataPoint, srcLen)
 	wrappers := make([]*otlpmetrics.HistogramDataPoint, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetHistogramDataPoints() {
 		wrappers[i] = &origs[i]
-		newHistogramDataPoint((*es.orig)[i], es.state).CopyTo(newHistogramDataPoint(wrappers[i], dest.state))
+		newHistogramDataPoint(es.orig.GetHistogramDataPoints()[i], es.state).CopyTo(newHistogramDataPoint(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetHistogramDataPoints(wrappers)
 }
 
 // Sort sorts the HistogramDataPoint elements within HistogramDataPointSlice given the
@@ -150,5 +160,5 @@ func (es HistogramDataPointSlice) CopyTo(dest HistogramDataPointSlice) {
 // can be compared.
 func (es HistogramDataPointSlice) Sort(less func(a, b HistogramDataPoint) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetHistogramDataPoints(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

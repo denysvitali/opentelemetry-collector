@@ -10,13 +10,14 @@ package plog
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 func TestResourceLogs_MoveTo(t *testing.T) {
@@ -75,5 +76,5 @@ func generateTestResourceLogs() ResourceLogs {
 func fillTestResourceLogs(tv ResourceLogs) {
 	internal.FillTestResource(internal.NewResource(tv.orig.GetResource(), tv.state))
 	tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestScopeLogsSlice(newScopeLogsSlice(utils.Ref(tv.orig.GetScopeLogs()), tv.state))
+	fillTestScopeLogsSlice(newScopeLogsSlice(&otlplogs.ResourceLogs{}, tv.state))
 }

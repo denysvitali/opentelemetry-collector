@@ -10,6 +10,7 @@ package ptrace
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -17,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 func TestSpanLink_MoveTo(t *testing.T) {
@@ -101,6 +101,6 @@ func fillTestSpanLink(tv SpanLink) {
 	tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
 	internal.FillTestTraceState(internal.NewTraceState(tv.orig.GetTraceState(), tv.state))
 	tv.orig.SetFlags(uint32(0xf))
-	internal.FillTestMap(internal.NewMap(utils.Ref(tv.orig.GetAttributes()), tv.state))
+	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
 	tv.orig.SetDroppedAttributesCount(uint32(17))
 }

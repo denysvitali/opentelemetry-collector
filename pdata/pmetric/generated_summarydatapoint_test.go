@@ -9,14 +9,16 @@
 package pmetric
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestSummaryDataPoint_MoveTo(t *testing.T) {
@@ -41,6 +43,7 @@ func TestSummaryDataPoint_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newSummaryDataPoint(&otlpmetrics.SummaryDataPoint{}, &sharedState)) })
 }
+
 
 func TestSummaryDataPoint_Attributes(t *testing.T) {
 	ms := NewSummaryDataPoint()
@@ -98,6 +101,7 @@ func TestSummaryDataPoint_Flags(t *testing.T) {
 	assert.Equal(t, testValFlags, ms.Flags())
 }
 
+
 func generateTestSummaryDataPoint() SummaryDataPoint {
 	tv := NewSummaryDataPoint()
 	fillTestSummaryDataPoint(tv)
@@ -105,11 +109,12 @@ func generateTestSummaryDataPoint() SummaryDataPoint {
 }
 
 func fillTestSummaryDataPoint(tv SummaryDataPoint) {
-	internal.FillTestMap(internal.NewMap(utils.Ref(tv.orig.GetAttributes()), tv.state))
-	tv.orig.SetStartTimeUnixNano(1234567890)
-	tv.orig.SetTimeUnixNano(1234567890)
-	tv.orig.SetCount(uint64(17))
-	tv.orig.SetSum(float64(17.13))
-	fillTestSummaryDataPointValueAtQuantileSlice(newSummaryDataPointValueAtQuantileSlice(utils.Ref(tv.orig.GetQuantileValues()), tv.state))
-	tv.orig.SetFlags(1)
+	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
+		tv.orig.SetStartTimeUnixNano(1234567890)
+		tv.orig.SetTimeUnixNano(1234567890)
+		tv.orig.SetCount(uint64(17))
+		tv.orig.SetSum(float64(17.13))
+	fillTestSummaryDataPointValueAtQuantileSlice(newSummaryDataPointValueAtQuantileSlice(&{}, tv.state))
+		tv.orig.SetFlags(1)
 }
+

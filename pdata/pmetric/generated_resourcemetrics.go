@@ -9,11 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // ResourceMetrics is a collection of metrics from a Resource.
@@ -74,11 +77,7 @@ func (ms ResourceMetrics) SetSchemaUrl(v string) {
 // ScopeMetrics returns the ScopeMetrics associated with this ResourceMetrics.
 // accessorSliceTemplate
 func (ms ResourceMetrics) ScopeMetrics() ScopeMetricsSlice {
-	if ms.orig.GetScopeMetrics() == nil {
-		ms.orig.SetScopeMetrics(utils.GetEmptyPointer(ms.orig.GetScopeMetrics()))
-	}
-	sl := ms.orig.GetScopeMetrics()
-	return newScopeMetricsSlice(&sl, ms.state)
+	return newScopeMetricsSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

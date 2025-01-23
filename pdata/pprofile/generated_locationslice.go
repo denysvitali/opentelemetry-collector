@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// LocationSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type LocationSliceAccessor interface {
+	SetLocationTable([]*otlpprofiles.Location)
+	GetLocationTable() []*otlpprofiles.Location
+}
 
 // LocationSlice logically represents a slice of Location.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewLocationSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type LocationSlice struct {
-	orig  *[]*otlpprofiles.Location
+	orig  LocationSliceAccessor
 	state *internal.State
 }
 
-func newLocationSlice(orig *[]*otlpprofiles.Location, state *internal.State) LocationSlice {
+func newLocationSlice(orig LocationSliceAccessor, state *internal.State) LocationSlice {
 	return LocationSlice{orig: orig, state: state}
 }
 
 // NewLocationSlice creates a LocationSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewLocationSlice() LocationSlice {
-	orig := []*otlpprofiles.Location(nil)
 	state := internal.StateMutable
-	return newLocationSlice(&orig, &state)
+	return newLocationSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewLocationSlice()".
 func (es LocationSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetLocationTable())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es LocationSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es LocationSlice) At(i int) Location {
-	return newLocation((*es.orig)[i], es.state)
+	return newLocation(es.orig.GetLocationTable()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es LocationSlice) At(i int) Location {
 //	}
 func (es LocationSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetLocationTable())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.Location, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.Location, len(es.orig.GetLocationTable()), newCap)
+	copy(newOrig, es.orig.GetLocationTable())
+	es.orig.SetLocationTable(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Location.
 // It returns the newly added Location.
 func (es LocationSlice) AppendEmpty() Location {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.Location{})
+	es.orig.SetLocationTable(append(es.orig.GetLocationTable(), &otlpprofiles.Location{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es LocationSlice) AppendEmpty() Location {
 func (es LocationSlice) MoveAndAppendTo(dest LocationSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetLocationTable() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetLocationTable(es.orig.GetLocationTable())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetLocationTable(append(dest.orig.GetLocationTable(), es.orig.GetLocationTable()...))
 	}
-	*es.orig = nil
+	es.orig.SetLocationTable(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es LocationSlice) MoveAndAppendTo(dest LocationSlice) {
 func (es LocationSlice) RemoveIf(f func(Location) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetLocationTable()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es LocationSlice) RemoveIf(f func(Location) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetLocationTable()[newLen] = es.orig.GetLocationTable()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetLocationTable(es.orig.GetLocationTable()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es LocationSlice) CopyTo(dest LocationSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetLocationTable())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newLocation((*es.orig)[i], es.state).CopyTo(newLocation((*dest.orig)[i], dest.state))
+		dest.orig.SetLocationTable(dest.orig.GetLocationTable()[:srcLen:destCap])
+		for i := range es.orig.GetLocationTable() {
+			newLocation(es.orig.GetLocationTable()[i], es.state).CopyTo(newLocation(dest.orig.GetLocationTable()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.Location, srcLen)
 	wrappers := make([]*otlpprofiles.Location, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetLocationTable() {
 		wrappers[i] = &origs[i]
-		newLocation((*es.orig)[i], es.state).CopyTo(newLocation(wrappers[i], dest.state))
+		newLocation(es.orig.GetLocationTable()[i], es.state).CopyTo(newLocation(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetLocationTable(wrappers)
 }
 
 // Sort sorts the Location elements within LocationSlice given the
@@ -150,5 +157,5 @@ func (es LocationSlice) CopyTo(dest LocationSlice) {
 // can be compared.
 func (es LocationSlice) Sort(less func(a, b Location) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetLocationTable(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

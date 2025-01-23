@@ -9,8 +9,8 @@
 package plogotlp
 
 import (
-	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectorlog "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/logs/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 )
 
 // ExportPartialSuccess represents the details of a partially successful export request.

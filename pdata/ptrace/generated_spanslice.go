@@ -12,8 +12,20 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// SpanSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type SpanSliceAccessor interface {
+	SetSpans([]*otlptrace.Span)
+	GetSpans() []*otlptrace.Span
+}
 
 // SpanSlice logically represents a slice of Span.
 //
@@ -23,27 +35,26 @@ import (
 // Must use NewSpanSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type SpanSlice struct {
-	orig  *[]*otlptrace.Span
+	orig  SpanSliceAccessor
 	state *internal.State
 }
 
-func newSpanSlice(orig *[]*otlptrace.Span, state *internal.State) SpanSlice {
+func newSpanSlice(orig SpanSliceAccessor, state *internal.State) SpanSlice {
 	return SpanSlice{orig: orig, state: state}
 }
 
 // NewSpanSlice creates a SpanSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewSpanSlice() SpanSlice {
-	orig := []*otlptrace.Span(nil)
 	state := internal.StateMutable
-	return newSpanSlice(&orig, &state)
+	return newSpanSlice(&otlptrace.ScopeSpans{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewSpanSlice()".
 func (es SpanSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetSpans())
 }
 
 // At returns the element at the given index.
@@ -55,7 +66,7 @@ func (es SpanSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es SpanSlice) At(i int) Span {
-	return newSpan((*es.orig)[i], es.state)
+	return newSpan(es.orig.GetSpans()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +83,21 @@ func (es SpanSlice) At(i int) Span {
 //	}
 func (es SpanSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetSpans())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlptrace.Span, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlptrace.Span, len(es.orig.GetSpans()), newCap)
+	copy(newOrig, es.orig.GetSpans())
+	es.orig.SetSpans(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Span.
 // It returns the newly added Span.
 func (es SpanSlice) AppendEmpty() Span {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlptrace.Span{})
+	es.orig.SetSpans(append(es.orig.GetSpans(), &otlptrace.Span{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +106,13 @@ func (es SpanSlice) AppendEmpty() Span {
 func (es SpanSlice) MoveAndAppendTo(dest SpanSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetSpans() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetSpans(es.orig.GetSpans())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetSpans(append(dest.orig.GetSpans(), es.orig.GetSpans()...))
 	}
-	*es.orig = nil
+	es.orig.SetSpans(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +120,7 @@ func (es SpanSlice) MoveAndAppendTo(dest SpanSlice) {
 func (es SpanSlice) RemoveIf(f func(Span) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetSpans()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +129,31 @@ func (es SpanSlice) RemoveIf(f func(Span) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetSpans()[newLen] = es.orig.GetSpans()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetSpans(es.orig.GetSpans()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es SpanSlice) CopyTo(dest SpanSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetSpans())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newSpan((*es.orig)[i], es.state).CopyTo(newSpan((*dest.orig)[i], dest.state))
+		dest.orig.SetSpans(dest.orig.GetSpans()[:srcLen:destCap])
+		for i := range es.orig.GetSpans() {
+			newSpan(es.orig.GetSpans()[i], es.state).CopyTo(newSpan(dest.orig.GetSpans()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlptrace.Span, srcLen)
 	wrappers := make([]*otlptrace.Span, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetSpans() {
 		wrappers[i] = &origs[i]
-		newSpan((*es.orig)[i], es.state).CopyTo(newSpan(wrappers[i], dest.state))
+		newSpan(es.orig.GetSpans()[i], es.state).CopyTo(newSpan(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetSpans(wrappers)
 }
 
 // Sort sorts the Span elements within SpanSlice given the
@@ -150,5 +161,5 @@ func (es SpanSlice) CopyTo(dest SpanSlice) {
 // can be compared.
 func (es SpanSlice) Sort(less func(a, b Span) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetSpans(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

@@ -5,6 +5,7 @@ package internal // import "go.opentelemetry.io/collector/pdata/internal/cmd/pda
 
 import (
 	"bytes"
+	"strings"
 )
 
 type baseSlice interface {
@@ -14,9 +15,11 @@ type baseSlice interface {
 
 // sliceOfPtrs generates code for a slice of pointer fields. The generated structs cannot be used from other packages.
 type sliceOfPtrs struct {
-	structName  string
-	packageName string
-	element     *messageValueStruct
+	structName    string
+	packageName   string
+	parentType    string
+	fieldAccessor string
+	element       *messageValueStruct
 }
 
 func (ss *sliceOfPtrs) getName() string {
@@ -43,6 +46,16 @@ func (ss *sliceOfPtrs) generateTests(packageInfo *PackageInfo) []byte {
 	return sb.Bytes()
 }
 
+func accessorElName(f string, defined string) string {
+	if defined != "" {
+		return defined
+	}
+	if strings.HasSuffix(f, "s") {
+		return f
+	}
+	return f + "s"
+}
+
 func (ss *sliceOfPtrs) templateFields(packageInfo *PackageInfo) map[string]any {
 	orig := origAccessor(ss.packageName)
 	state := stateAccessor(ss.packageName)
@@ -54,12 +67,14 @@ func (ss *sliceOfPtrs) templateFields(packageInfo *PackageInfo) map[string]any {
 		"originName":         ss.element.originFullName,
 		"originElementType":  "*" + ss.element.originFullName,
 		"emptyOriginElement": "&" + ss.element.originFullName + "{}",
-		"newElement":         "new" + ss.element.structName + "((*es." + orig + ")[i], es." + state + ")",
+		"newElement":         "new" + ss.element.structName + "(es." + orig + ".Get" + accessorElName(ss.element.structName, ss.fieldAccessor) + "()[i], es." + state + ")",
 		"origAccessor":       orig,
 		"stateAccessor":      state,
 		"packageName":        packageInfo.name,
 		"imports":            packageInfo.imports,
 		"testImports":        packageInfo.testImports,
+		"fieldAccessor":      accessorElName(ss.element.structName, ss.fieldAccessor),
+		"sliceParentType":    ss.parentType,
 	}
 }
 
@@ -75,9 +90,11 @@ var _ baseStruct = (*sliceOfPtrs)(nil)
 
 // sliceOfValues generates code for a slice of pointer fields. The generated structs cannot be used from other packages.
 type sliceOfValues struct {
-	structName  string
-	packageName string
-	element     *messageValueStruct
+	structName    string
+	packageName   string
+	parentType    string
+	fieldAccessor string
+	element       *messageValueStruct
 }
 
 func (ss *sliceOfValues) getName() string {
@@ -114,12 +131,14 @@ func (ss *sliceOfValues) templateFields(packageInfo *PackageInfo) map[string]any
 		"originName":         ss.element.originFullName,
 		"originElementType":  "*" + ss.element.originFullName,
 		"emptyOriginElement": "&" + ss.element.originFullName + "{}",
-		"newElement":         "new" + ss.element.structName + "((*es." + orig + ")[i], es." + state + ")",
+		"newElement":         "new" + ss.element.structName + "(es." + orig + ".Get" + accessorElName(ss.element.structName, ss.fieldAccessor) + "()[i], es." + state + ")",
 		"origAccessor":       orig,
 		"stateAccessor":      state,
 		"packageName":        packageInfo.name,
 		"imports":            packageInfo.imports,
 		"testImports":        packageInfo.testImports,
+		"fieldAccessor":      accessorElName(ss.element.structName, ss.fieldAccessor),
+		"sliceParentType":    ss.parentType,
 	}
 }
 

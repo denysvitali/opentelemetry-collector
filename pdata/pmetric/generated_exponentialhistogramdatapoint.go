@@ -9,10 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // ExponentialHistogramDataPoint is a single data point in a timeseries that describes the
@@ -55,9 +59,6 @@ func (ms ExponentialHistogramDataPoint) MoveTo(dest ExponentialHistogramDataPoin
 // Attributes returns the Attributes associated with this ExponentialHistogramDataPoint.
 // accessorSliceTemplate
 func (ms ExponentialHistogramDataPoint) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 
@@ -140,10 +141,7 @@ func (ms ExponentialHistogramDataPoint) Negative() ExponentialHistogramDataPoint
 // Exemplars returns the Exemplars associated with this ExponentialHistogramDataPoint.
 // accessorSliceTemplate
 func (ms ExponentialHistogramDataPoint) Exemplars() ExemplarSlice {
-	if ms.orig.GetExemplars() == nil {
-	}
-	sl := ms.orig.GetExemplars()
-	return newExemplarSlice(&sl, ms.state)
+	return newExemplarSlice(ms.orig, ms.state)
 }
 
 // Flags returns the flags associated with this ExponentialHistogramDataPoint.

@@ -9,9 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 // Sum represents the type of a numeric metric that is calculated as a sum of all reported measurements over a time interval.
@@ -74,11 +79,7 @@ func (ms Sum) SetIsMonotonic(v bool) {
 // DataPoints returns the DataPoints associated with this Sum.
 // accessorSliceTemplate
 func (ms Sum) DataPoints() NumberDataPointSlice {
-	if ms.orig.GetDataPoints() == nil {
-		ms.orig.SetDataPoints(utils.GetEmptyPointer(ms.orig.GetDataPoints()))
-	}
-	sl := ms.orig.GetDataPoints()
-	return newNumberDataPointSlice(&sl, ms.state)
+	return newNumberDataPointSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

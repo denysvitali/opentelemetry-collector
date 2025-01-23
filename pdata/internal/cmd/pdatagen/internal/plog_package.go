@@ -42,6 +42,7 @@ var plog = &Package{
 var resourceLogsSlice = &sliceOfPtrs{
 	structName: "ResourceLogsSlice",
 	element:    resourceLogs,
+	parentType: "otlplogs.LogsData",
 }
 
 var resourceLogs = &messageValueStruct{
@@ -54,6 +55,7 @@ var resourceLogs = &messageValueStruct{
 		&sliceField{
 			fieldName:   "ScopeLogs",
 			returnSlice: scopeLogsSlice,
+			newType:     "otlplogs.ResourceLogs",
 		},
 	},
 }
@@ -61,6 +63,7 @@ var resourceLogs = &messageValueStruct{
 var scopeLogsSlice = &sliceOfPtrs{
 	structName: "ScopeLogsSlice",
 	element:    scopeLogs,
+	parentType: "otlplogs.ResourceLogs",
 }
 
 var scopeLogs = &messageValueStruct{
@@ -73,6 +76,7 @@ var scopeLogs = &messageValueStruct{
 		&sliceField{
 			fieldName:   "LogRecords",
 			returnSlice: logSlice,
+			newType:     "otlplogs.ScopeLogs",
 		},
 	},
 }
@@ -80,6 +84,7 @@ var scopeLogs = &messageValueStruct{
 var logSlice = &sliceOfPtrs{
 	structName: "LogRecordSlice",
 	element:    logRecord,
+	parentType: "otlplogs.ScopeLogs",
 }
 
 var logRecord = &messageValueStruct{

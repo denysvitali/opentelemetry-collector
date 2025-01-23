@@ -11,9 +11,9 @@ package pprofile
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
 	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // Profile are an implementation of the pprofextended data model.
@@ -53,95 +53,60 @@ func (ms Profile) MoveTo(dest Profile) {
 // SampleType returns the SampleType associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) SampleType() ValueTypeSlice {
-	if ms.orig.GetSampleType() == nil {
-		ms.orig.SetSampleType(utils.GetEmptyPointer(ms.orig.GetSampleType()))
-	}
-	sl := ms.orig.GetSampleType()
-	return newValueTypeSlice(&sl, ms.state)
+	return newValueTypeSlice(ms.orig, ms.state)
 }
 
 // Sample returns the Sample associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) Sample() SampleSlice {
-	if ms.orig.GetSample() == nil {
-		ms.orig.SetSample(utils.GetEmptyPointer(ms.orig.GetSample()))
-	}
-	sl := ms.orig.GetSample()
-	return newSampleSlice(&sl, ms.state)
+	return newSampleSlice(ms.orig, ms.state)
 }
 
 // MappingTable returns the MappingTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) MappingTable() MappingSlice {
-	if ms.orig.GetMappingTable() == nil {
-		ms.orig.SetMappingTable(utils.GetEmptyPointer(ms.orig.GetMappingTable()))
-	}
-	sl := ms.orig.GetMappingTable()
-	return newMappingSlice(&sl, ms.state)
+	return newMappingSlice(ms.orig, ms.state)
 }
 
 // LocationTable returns the LocationTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) LocationTable() LocationSlice {
-	if ms.orig.GetLocationTable() == nil {
-		ms.orig.SetLocationTable(utils.GetEmptyPointer(ms.orig.GetLocationTable()))
-	}
-	sl := ms.orig.GetLocationTable()
-	return newLocationSlice(&sl, ms.state)
+	return newLocationSlice(ms.orig, ms.state)
 }
 
 // LocationIndices returns the LocationIndices associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) LocationIndices() pcommon.Int32Slice {
-	if ms.orig.GetLocationIndices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetLocationIndices()), ms.state))
 }
 
 // FunctionTable returns the FunctionTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) FunctionTable() FunctionSlice {
-	if ms.orig.GetFunctionTable() == nil {
-		ms.orig.SetFunctionTable(utils.GetEmptyPointer(ms.orig.GetFunctionTable()))
-	}
-	sl := ms.orig.GetFunctionTable()
-	return newFunctionSlice(&sl, ms.state)
+	return newFunctionSlice(ms.orig, ms.state)
 }
 
 // AttributeTable returns the AttributeTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) AttributeTable() AttributeTableSlice {
-	if ms.orig.GetAttributeTable() == nil {
-	}
-	sl := ms.orig.GetAttributeTable()
-	return newAttributeTableSlice(&sl, ms.state)
+	return newAttributeTableSlice(ms.orig, ms.state)
 }
 
 // AttributeUnits returns the AttributeUnits associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) AttributeUnits() AttributeUnitSlice {
-	if ms.orig.GetAttributeUnits() == nil {
-		ms.orig.SetAttributeUnits(utils.GetEmptyPointer(ms.orig.GetAttributeUnits()))
-	}
-	sl := ms.orig.GetAttributeUnits()
-	return newAttributeUnitSlice(&sl, ms.state)
+	return newAttributeUnitSlice(ms.orig, ms.state)
 }
 
 // LinkTable returns the LinkTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) LinkTable() LinkSlice {
-	if ms.orig.GetLinkTable() == nil {
-		ms.orig.SetLinkTable(utils.GetEmptyPointer(ms.orig.GetLinkTable()))
-	}
-	sl := ms.orig.GetLinkTable()
-	return newLinkSlice(&sl, ms.state)
+	return newLinkSlice(ms.orig, ms.state)
 }
 
 // StringTable returns the StringTable associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) StringTable() pcommon.StringSlice {
-	if ms.orig.GetStringTable() == nil {
-	}
 	return pcommon.StringSlice(internal.NewStringSlice(utils.Ref(ms.orig.GetStringTable()), ms.state))
 }
 
@@ -202,8 +167,6 @@ func (ms Profile) SetPeriod(v int64) {
 // CommentStrindices returns the CommentStrindices associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) CommentStrindices() pcommon.Int32Slice {
-	if ms.orig.GetCommentStrindices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetCommentStrindices()), ms.state))
 }
 
@@ -233,8 +196,6 @@ func (ms Profile) SetProfileID(v ProfileID) {
 // AttributeIndices returns the AttributeIndices associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) AttributeIndices() pcommon.Int32Slice {
-	if ms.orig.GetAttributeIndices() == nil {
-	}
 	return pcommon.Int32Slice(internal.NewInt32Slice(utils.Ref(ms.orig.GetAttributeIndices()), ms.state))
 }
 
@@ -265,8 +226,6 @@ func (ms Profile) SetOriginalPayloadFormat(v string) {
 // OriginalPayload returns the OriginalPayload associated with this Profile.
 // accessorSliceTemplate
 func (ms Profile) OriginalPayload() pcommon.ByteSlice {
-	if ms.orig.GetOriginalPayload() == nil {
-	}
 	return pcommon.ByteSlice(internal.NewByteSlice(utils.Ref(ms.orig.GetOriginalPayload()), ms.state))
 }
 

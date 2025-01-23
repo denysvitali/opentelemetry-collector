@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ScopeProfilesSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ScopeProfilesSliceAccessor interface {
+	SetScopeProfiles([]*otlpprofiles.ScopeProfiles)
+	GetScopeProfiles() []*otlpprofiles.ScopeProfiles
+}
 
 // ScopeProfilesSlice logically represents a slice of ScopeProfiles.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewScopeProfilesSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ScopeProfilesSlice struct {
-	orig  *[]*otlpprofiles.ScopeProfiles
+	orig  ScopeProfilesSliceAccessor
 	state *internal.State
 }
 
-func newScopeProfilesSlice(orig *[]*otlpprofiles.ScopeProfiles, state *internal.State) ScopeProfilesSlice {
+func newScopeProfilesSlice(orig ScopeProfilesSliceAccessor, state *internal.State) ScopeProfilesSlice {
 	return ScopeProfilesSlice{orig: orig, state: state}
 }
 
 // NewScopeProfilesSlice creates a ScopeProfilesSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewScopeProfilesSlice() ScopeProfilesSlice {
-	orig := []*otlpprofiles.ScopeProfiles(nil)
 	state := internal.StateMutable
-	return newScopeProfilesSlice(&orig, &state)
+	return newScopeProfilesSlice(&otlpprofiles.ResourceProfiles{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewScopeProfilesSlice()".
 func (es ScopeProfilesSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetScopeProfiles())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es ScopeProfilesSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ScopeProfilesSlice) At(i int) ScopeProfiles {
-	return newScopeProfiles((*es.orig)[i], es.state)
+	return newScopeProfiles(es.orig.GetScopeProfiles()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es ScopeProfilesSlice) At(i int) ScopeProfiles {
 //	}
 func (es ScopeProfilesSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetScopeProfiles())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.ScopeProfiles, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.ScopeProfiles, len(es.orig.GetScopeProfiles()), newCap)
+	copy(newOrig, es.orig.GetScopeProfiles())
+	es.orig.SetScopeProfiles(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty ScopeProfiles.
 // It returns the newly added ScopeProfiles.
 func (es ScopeProfilesSlice) AppendEmpty() ScopeProfiles {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.ScopeProfiles{})
+	es.orig.SetScopeProfiles(append(es.orig.GetScopeProfiles(), &otlpprofiles.ScopeProfiles{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es ScopeProfilesSlice) AppendEmpty() ScopeProfiles {
 func (es ScopeProfilesSlice) MoveAndAppendTo(dest ScopeProfilesSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetScopeProfiles() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetScopeProfiles(es.orig.GetScopeProfiles())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetScopeProfiles(append(dest.orig.GetScopeProfiles(), es.orig.GetScopeProfiles()...))
 	}
-	*es.orig = nil
+	es.orig.SetScopeProfiles(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es ScopeProfilesSlice) MoveAndAppendTo(dest ScopeProfilesSlice) {
 func (es ScopeProfilesSlice) RemoveIf(f func(ScopeProfiles) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetScopeProfiles()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es ScopeProfilesSlice) RemoveIf(f func(ScopeProfiles) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetScopeProfiles()[newLen] = es.orig.GetScopeProfiles()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetScopeProfiles(es.orig.GetScopeProfiles()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ScopeProfilesSlice) CopyTo(dest ScopeProfilesSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetScopeProfiles())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newScopeProfiles((*es.orig)[i], es.state).CopyTo(newScopeProfiles((*dest.orig)[i], dest.state))
+		dest.orig.SetScopeProfiles(dest.orig.GetScopeProfiles()[:srcLen:destCap])
+		for i := range es.orig.GetScopeProfiles() {
+			newScopeProfiles(es.orig.GetScopeProfiles()[i], es.state).CopyTo(newScopeProfiles(dest.orig.GetScopeProfiles()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.ScopeProfiles, srcLen)
 	wrappers := make([]*otlpprofiles.ScopeProfiles, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetScopeProfiles() {
 		wrappers[i] = &origs[i]
-		newScopeProfiles((*es.orig)[i], es.state).CopyTo(newScopeProfiles(wrappers[i], dest.state))
+		newScopeProfiles(es.orig.GetScopeProfiles()[i], es.state).CopyTo(newScopeProfiles(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetScopeProfiles(wrappers)
 }
 
 // Sort sorts the ScopeProfiles elements within ScopeProfilesSlice given the
@@ -150,5 +157,5 @@ func (es ScopeProfilesSlice) CopyTo(dest ScopeProfilesSlice) {
 // can be compared.
 func (es ScopeProfilesSlice) Sort(less func(a, b ScopeProfiles) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetScopeProfiles(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

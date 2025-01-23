@@ -9,15 +9,15 @@
 package pprofile
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
-	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestProfile_MoveTo(t *testing.T) {
@@ -42,6 +42,7 @@ func TestProfile_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newProfile(&otlpprofiles.Profile{}, &sharedState)) })
 }
+
 
 func TestProfile_SampleType(t *testing.T) {
 	ms := NewProfile()
@@ -208,6 +209,7 @@ func TestProfile_OriginalPayload(t *testing.T) {
 	assert.Equal(t, pcommon.ByteSlice(internal.GenerateTestByteSlice()), ms.OriginalPayload())
 }
 
+
 func generateTestProfile() Profile {
 	tv := NewProfile()
 	fillTestProfile(tv)
@@ -215,26 +217,27 @@ func generateTestProfile() Profile {
 }
 
 func fillTestProfile(tv Profile) {
-	fillTestValueTypeSlice(newValueTypeSlice(utils.Ref(tv.orig.GetSampleType()), tv.state))
-	fillTestSampleSlice(newSampleSlice(utils.Ref(tv.orig.GetSample()), tv.state))
-	fillTestMappingSlice(newMappingSlice(utils.Ref(tv.orig.GetMappingTable()), tv.state))
-	fillTestLocationSlice(newLocationSlice(utils.Ref(tv.orig.GetLocationTable()), tv.state))
-	internal.FillTestInt32Slice(internal.NewInt32Slice(utils.Ref(tv.orig.GetLocationIndices()), tv.state))
-	fillTestFunctionSlice(newFunctionSlice(utils.Ref(tv.orig.GetFunctionTable()), tv.state))
-	fillTestAttributeTableSlice(newAttributeTableSlice(utils.Ref(tv.orig.GetAttributeTable()), tv.state))
-	fillTestAttributeUnitSlice(newAttributeUnitSlice(utils.Ref(tv.orig.GetAttributeUnits()), tv.state))
-	fillTestLinkSlice(newLinkSlice(utils.Ref(tv.orig.GetLinkTable()), tv.state))
-	internal.FillTestStringSlice(internal.NewStringSlice(utils.Ref(tv.orig.GetStringTable()), tv.state))
-	tv.orig.SetTimeNanos(1234567890)
-	tv.orig.SetDurationNanos(1234567890)
-	tv.orig.SetTimeNanos(1234567890)
+	fillTestValueTypeSlice(newValueTypeSlice(&{}, tv.state))
+	fillTestSampleSlice(newSampleSlice(&{}, tv.state))
+	fillTestMappingSlice(newMappingSlice(&{}, tv.state))
+	fillTestLocationSlice(newLocationSlice(&{}, tv.state))
+	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
+	fillTestFunctionSlice(newFunctionSlice(&{}, tv.state))
+	fillTestAttributeTableSlice(newAttributeTableSlice(&{}, tv.state))
+	fillTestAttributeUnitSlice(newAttributeUnitSlice(&{}, tv.state))
+	fillTestLinkSlice(newLinkSlice(&{}, tv.state))
+	internal.FillTestStringSlice(internal.NewStringSlice(&{}, tv.state))
+		tv.orig.SetTimeNanos(1234567890)
+		tv.orig.SetDurationNanos(1234567890)
+		tv.orig.SetTimeNanos(1234567890)
 	fillTestValueType(newValueType(tv.orig.GetPeriodType(), tv.state))
-	tv.orig.SetPeriod(int64(1))
-	internal.FillTestInt32Slice(internal.NewInt32Slice(utils.Ref(tv.orig.GetCommentStrindices()), tv.state))
-	tv.orig.SetDefaultSampleTypeStrindex(int32(1))
-	tv.orig.SetProfileId(data.ProfileID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
-	internal.FillTestInt32Slice(internal.NewInt32Slice(utils.Ref(tv.orig.GetAttributeIndices()), tv.state))
-	tv.orig.SetDroppedAttributesCount(uint32(17))
-	tv.orig.SetOriginalPayloadFormat("original payload")
-	internal.FillTestByteSlice(internal.NewByteSlice(utils.Ref(tv.orig.GetOriginalPayload()), tv.state))
+		tv.orig.SetPeriod(int64(1))
+	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
+		tv.orig.SetDefaultSampleTypeStrindex(int32(1))
+		tv.orig.SetProfileId(data.ProfileID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
+	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
+		tv.orig.SetDroppedAttributesCount(uint32(17))
+		tv.orig.SetOriginalPayloadFormat("original payload")
+	internal.FillTestByteSlice(internal.NewByteSlice(&{}, tv.state))
 }
+

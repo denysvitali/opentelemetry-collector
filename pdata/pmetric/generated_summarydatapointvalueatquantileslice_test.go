@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSummaryDataPointValueAtQuantileSlice(t *testing.T) {
 	es := NewSummaryDataPointValueAtQuantileSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSummaryDataPointValueAtQuantileSlice(&[]*otlpmetrics.SummaryDataPoint_ValueAtQuantile{}, &state)
+	es = newSummaryDataPointValueAtQuantileSlice(&otlpmetrics.SummaryDataPoint{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSummaryDataPointValueAtQuantile()
@@ -38,7 +40,7 @@ func TestSummaryDataPointValueAtQuantileSlice(t *testing.T) {
 
 func TestSummaryDataPointValueAtQuantileSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSummaryDataPointValueAtQuantileSlice(&[]*otlpmetrics.SummaryDataPoint_ValueAtQuantile{}, &sharedState)
+	es := newSummaryDataPointValueAtQuantileSlice(&otlpmetrics.SummaryDataPoint{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestSummaryDataPointValueAtQuantileSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetQuantileValues()))
 	assert.Equal(t, generateTestSummaryDataPointValueAtQuantileSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSummaryDataPointValueAtQuantileSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetQuantileValues()))
 	assert.Equal(t, generateTestSummaryDataPointValueAtQuantileSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestSummaryDataPointValueAtQuantileSlice() SummaryDataPointValueAtQ
 }
 
 func fillTestSummaryDataPointValueAtQuantileSlice(es SummaryDataPointValueAtQuantileSlice) {
-	*es.orig = make([]*otlpmetrics.SummaryDataPoint_ValueAtQuantile, 7)
+	es.orig.SetQuantileValues(make([]*otlpmetrics.SummaryDataPoint_ValueAtQuantile, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.SummaryDataPoint_ValueAtQuantile{}
-		fillTestSummaryDataPointValueAtQuantile(newSummaryDataPointValueAtQuantile((*es.orig)[i], es.state))
+		es.orig.GetQuantileValues()[i] = &otlpmetrics.SummaryDataPoint_ValueAtQuantile{}
+		fillTestSummaryDataPointValueAtQuantile(newSummaryDataPointValueAtQuantile(es.orig.GetQuantileValues()[i], es.state))
 	}
 }

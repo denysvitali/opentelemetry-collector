@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestScopeLogsSlice(t *testing.T) {
 	es := NewScopeLogsSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newScopeLogsSlice(&[]*otlplogs.ScopeLogs{}, &state)
+	es = newScopeLogsSlice(&otlplogs.ResourceLogs{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewScopeLogs()
@@ -38,7 +40,7 @@ func TestScopeLogsSlice(t *testing.T) {
 
 func TestScopeLogsSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newScopeLogsSlice(&[]*otlplogs.ScopeLogs{}, &sharedState)
+	es := newScopeLogsSlice(&otlplogs.ResourceLogs{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestScopeLogsSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetScopeLogs()))
 	assert.Equal(t, generateTestScopeLogsSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestScopeLogsSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetScopeLogs()))
 	assert.Equal(t, generateTestScopeLogsSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestScopeLogsSlice() ScopeLogsSlice {
 }
 
 func fillTestScopeLogsSlice(es ScopeLogsSlice) {
-	*es.orig = make([]*otlplogs.ScopeLogs, 7)
+	es.orig.SetScopeLogs(make([]*otlplogs.ScopeLogs, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlplogs.ScopeLogs{}
-		fillTestScopeLogs(newScopeLogs((*es.orig)[i], es.state))
+		es.orig.GetScopeLogs()[i] = &otlplogs.ScopeLogs{}
+		fillTestScopeLogs(newScopeLogs(es.orig.GetScopeLogs()[i], es.state))
 	}
 }

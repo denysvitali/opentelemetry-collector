@@ -9,14 +9,16 @@
 package pmetric
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestMetric_MoveTo(t *testing.T) {
@@ -41,6 +43,7 @@ func TestMetric_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newMetric(&otlpmetrics.Metric{}, &sharedState)) })
 }
+
 
 func TestMetric_Name(t *testing.T) {
 	ms := NewMetric()
@@ -176,6 +179,9 @@ func TestMetric_CopyTo_Summary(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newMetric(&otlpmetrics.Metric{}, &sharedState)) })
 }
 
+
+
+
 func generateTestMetric() Metric {
 	tv := NewMetric()
 	fillTestMetric(tv)
@@ -183,10 +189,11 @@ func generateTestMetric() Metric {
 }
 
 func fillTestMetric(tv Metric) {
-	tv.orig.SetName("test_name")
-	tv.orig.SetDescription("test_description")
-	tv.orig.SetUnit("1")
-	internal.FillTestMap(internal.NewMap(utils.Ref(tv.orig.GetMetadata()), tv.state))
-	tv.orig.SetSum(&otlpmetrics.Sum{})
+		tv.orig.SetName("test_name")
+		tv.orig.SetDescription("test_description")
+		tv.orig.SetUnit("1")
+	internal.FillTestMap(internal.NewMap(&{}, tv.state))
+		tv.orig.SetSum(&otlpmetrics.Sum{})
 	fillTestSum(newSum(tv.orig.GetSum(), tv.state))
 }
+

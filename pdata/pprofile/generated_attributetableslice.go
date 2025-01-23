@@ -10,8 +10,18 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
-	v1 "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// AttributeTableSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type AttributeTableSliceAccessor interface {
+	SetValues([]*v1.KeyValue)
+	GetValues() []*v1.KeyValue
+}
 
 // AttributeTableSlice logically represents a slice of Attribute.
 //
@@ -21,27 +31,26 @@ import (
 // Must use NewAttributeTableSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type AttributeTableSlice struct {
-	orig  *[]*v1.KeyValue
+	orig  AttributeTableSliceAccessor
 	state *internal.State
 }
 
-func newAttributeTableSlice(orig *[]*v1.KeyValue, state *internal.State) AttributeTableSlice {
+func newAttributeTableSlice(orig AttributeTableSliceAccessor, state *internal.State) AttributeTableSlice {
 	return AttributeTableSlice{orig: orig, state: state}
 }
 
 // NewAttributeTableSlice creates a AttributeTableSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewAttributeTableSlice() AttributeTableSlice {
-	orig := []*v1.KeyValue(nil)
 	state := internal.StateMutable
-	return newAttributeTableSlice(&orig, &state)
+	return newAttributeTableSlice(&otlpcommon.KeyValueList{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewAttributeTableSlice()".
 func (es AttributeTableSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetValues())
 }
 
 // At returns the element at the given index.
@@ -53,7 +62,7 @@ func (es AttributeTableSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es AttributeTableSlice) At(i int) Attribute {
-	return newAttribute((*es.orig)[i], es.state)
+	return newAttribute(es.orig.GetValues()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -70,21 +79,21 @@ func (es AttributeTableSlice) At(i int) Attribute {
 //	}
 func (es AttributeTableSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetValues())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*v1.KeyValue, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*v1.KeyValue, len(es.orig.GetValues()), newCap)
+	copy(newOrig, es.orig.GetValues())
+	es.orig.SetValues(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Attribute.
 // It returns the newly added Attribute.
 func (es AttributeTableSlice) AppendEmpty() Attribute {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &v1.KeyValue{})
+	es.orig.SetValues(append(es.orig.GetValues(), &v1.KeyValue{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -93,13 +102,13 @@ func (es AttributeTableSlice) AppendEmpty() Attribute {
 func (es AttributeTableSlice) MoveAndAppendTo(dest AttributeTableSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetValues() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetValues(es.orig.GetValues())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetValues(append(dest.orig.GetValues(), es.orig.GetValues()...))
 	}
-	*es.orig = nil
+	es.orig.SetValues(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -107,7 +116,7 @@ func (es AttributeTableSlice) MoveAndAppendTo(dest AttributeTableSlice) {
 func (es AttributeTableSlice) RemoveIf(f func(Attribute) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetValues()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -116,23 +125,23 @@ func (es AttributeTableSlice) RemoveIf(f func(Attribute) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetValues()[newLen] = es.orig.GetValues()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetValues(es.orig.GetValues()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es AttributeTableSlice) CopyTo(dest AttributeTableSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetValues())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
+		dest.orig.SetValues(dest.orig.GetValues()[:srcLen:destCap])
 	} else {
-		(*dest.orig) = make([]*v1.KeyValue, srcLen)
+		(dest.orig).SetValues(make([]*v1.KeyValue, srcLen))
 	}
-	for i := range *es.orig {
-		newAttribute((*es.orig)[i], es.state).CopyTo(newAttribute((*dest.orig)[i], dest.state))
+	for i := range es.orig.GetValues() {
+		newAttribute(es.orig.GetValues()[i], es.state).CopyTo(newAttribute(dest.orig.GetValues()[i], dest.state))
 	}
 }

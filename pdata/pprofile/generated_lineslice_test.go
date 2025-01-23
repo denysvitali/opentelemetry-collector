@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestLineSlice(t *testing.T) {
 	es := NewLineSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newLineSlice(&[]*otlpprofiles.Line{}, &state)
+	es = newLineSlice(&otlpprofile.Location{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewLine()
@@ -38,7 +39,7 @@ func TestLineSlice(t *testing.T) {
 
 func TestLineSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newLineSlice(&[]*otlpprofiles.Line{}, &sharedState)
+	es := newLineSlice(&otlpprofile.Location{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestLineSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetLine()))
 	assert.Equal(t, generateTestLineSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestLineSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetLine()))
 	assert.Equal(t, generateTestLineSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestLineSlice() LineSlice {
 }
 
 func fillTestLineSlice(es LineSlice) {
-	*es.orig = make([]*otlpprofiles.Line, 7)
+	es.orig.SetLine(make([]*otlpprofiles.Line, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.Line{}
-		fillTestLine(newLine((*es.orig)[i], es.state))
+		es.orig.GetLine()[i] = &otlpprofiles.Line{}
+		fillTestLine(newLine(es.orig.GetLine()[i], es.state))
 	}
 }

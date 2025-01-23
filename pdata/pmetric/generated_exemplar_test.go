@@ -9,15 +9,16 @@
 package pmetric
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+"go.opentelemetry.io/collector/pdata/internal/data"
+otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestExemplar_MoveTo(t *testing.T) {
@@ -42,6 +43,7 @@ func TestExemplar_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newExemplar(&otlpmetrics.Exemplar{}, &sharedState)) })
 }
+
 
 func TestExemplar_Timestamp(t *testing.T) {
 	ms := NewExemplar()
@@ -76,6 +78,8 @@ func TestExemplar_IntValue(t *testing.T) {
 	assert.Panics(t, func() { newExemplar(&otlpmetrics.Exemplar{}, &sharedState).SetIntValue(int64(17)) })
 }
 
+
+
 func TestExemplar_FilteredAttributes(t *testing.T) {
 	ms := NewExemplar()
 	assert.Equal(t, pcommon.NewMap(), ms.FilteredAttributes())
@@ -99,6 +103,7 @@ func TestExemplar_SpanID(t *testing.T) {
 	assert.Equal(t, testValSpanID, ms.SpanID())
 }
 
+
 func generateTestExemplar() Exemplar {
 	tv := NewExemplar()
 	fillTestExemplar(tv)
@@ -106,9 +111,10 @@ func generateTestExemplar() Exemplar {
 }
 
 func fillTestExemplar(tv Exemplar) {
-	tv.orig.SetTimeUnixNano(1234567890)
-	tv.orig.SetAsInt(int64(17))
-	internal.FillTestMap(internal.NewMap(utils.Ref(tv.orig.GetFilteredAttributes()), tv.state))
-	tv.orig.SetTraceId(data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
-	tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
+		tv.orig.SetTimeUnixNano(1234567890)
+		tv.orig.SetAsInt(int64(17))
+	internal.FillTestMap(internal.NewMap(&{}, tv.state))
+		tv.orig.SetTraceId(data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
+		tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
 }
+

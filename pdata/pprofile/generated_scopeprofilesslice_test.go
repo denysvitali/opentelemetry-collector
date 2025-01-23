@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestScopeProfilesSlice(t *testing.T) {
 	es := NewScopeProfilesSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newScopeProfilesSlice(&[]*otlpprofiles.ScopeProfiles{}, &state)
+	es = newScopeProfilesSlice(&otlpprofiles.ResourceProfiles{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewScopeProfiles()
@@ -38,7 +39,7 @@ func TestScopeProfilesSlice(t *testing.T) {
 
 func TestScopeProfilesSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newScopeProfilesSlice(&[]*otlpprofiles.ScopeProfiles{}, &sharedState)
+	es := newScopeProfilesSlice(&otlpprofiles.ResourceProfiles{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestScopeProfilesSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetScopeProfiles()))
 	assert.Equal(t, generateTestScopeProfilesSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestScopeProfilesSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetScopeProfiles()))
 	assert.Equal(t, generateTestScopeProfilesSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestScopeProfilesSlice() ScopeProfilesSlice {
 }
 
 func fillTestScopeProfilesSlice(es ScopeProfilesSlice) {
-	*es.orig = make([]*otlpprofiles.ScopeProfiles, 7)
+	es.orig.SetScopeProfiles(make([]*otlpprofiles.ScopeProfiles, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.ScopeProfiles{}
-		fillTestScopeProfiles(newScopeProfiles((*es.orig)[i], es.state))
+		es.orig.GetScopeProfiles()[i] = &otlpprofiles.ScopeProfiles{}
+		fillTestScopeProfiles(newScopeProfiles(es.orig.GetScopeProfiles()[i], es.state))
 	}
 }

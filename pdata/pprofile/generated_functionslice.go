@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// FunctionSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type FunctionSliceAccessor interface {
+	SetFunctionTable([]*otlpprofiles.Function)
+	GetFunctionTable() []*otlpprofiles.Function
+}
 
 // FunctionSlice logically represents a slice of Function.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewFunctionSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type FunctionSlice struct {
-	orig  *[]*otlpprofiles.Function
+	orig  FunctionSliceAccessor
 	state *internal.State
 }
 
-func newFunctionSlice(orig *[]*otlpprofiles.Function, state *internal.State) FunctionSlice {
+func newFunctionSlice(orig FunctionSliceAccessor, state *internal.State) FunctionSlice {
 	return FunctionSlice{orig: orig, state: state}
 }
 
 // NewFunctionSlice creates a FunctionSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewFunctionSlice() FunctionSlice {
-	orig := []*otlpprofiles.Function(nil)
 	state := internal.StateMutable
-	return newFunctionSlice(&orig, &state)
+	return newFunctionSlice(&otlpprofiles.Profile{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewFunctionSlice()".
 func (es FunctionSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetFunctionTable())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es FunctionSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es FunctionSlice) At(i int) Function {
-	return newFunction((*es.orig)[i], es.state)
+	return newFunction(es.orig.GetFunctionTable()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es FunctionSlice) At(i int) Function {
 //	}
 func (es FunctionSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetFunctionTable())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.Function, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.Function, len(es.orig.GetFunctionTable()), newCap)
+	copy(newOrig, es.orig.GetFunctionTable())
+	es.orig.SetFunctionTable(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty Function.
 // It returns the newly added Function.
 func (es FunctionSlice) AppendEmpty() Function {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.Function{})
+	es.orig.SetFunctionTable(append(es.orig.GetFunctionTable(), &otlpprofiles.Function{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es FunctionSlice) AppendEmpty() Function {
 func (es FunctionSlice) MoveAndAppendTo(dest FunctionSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetFunctionTable() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetFunctionTable(es.orig.GetFunctionTable())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetFunctionTable(append(dest.orig.GetFunctionTable(), es.orig.GetFunctionTable()...))
 	}
-	*es.orig = nil
+	es.orig.SetFunctionTable(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es FunctionSlice) MoveAndAppendTo(dest FunctionSlice) {
 func (es FunctionSlice) RemoveIf(f func(Function) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetFunctionTable()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es FunctionSlice) RemoveIf(f func(Function) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetFunctionTable()[newLen] = es.orig.GetFunctionTable()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetFunctionTable(es.orig.GetFunctionTable()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es FunctionSlice) CopyTo(dest FunctionSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetFunctionTable())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newFunction((*es.orig)[i], es.state).CopyTo(newFunction((*dest.orig)[i], dest.state))
+		dest.orig.SetFunctionTable(dest.orig.GetFunctionTable()[:srcLen:destCap])
+		for i := range es.orig.GetFunctionTable() {
+			newFunction(es.orig.GetFunctionTable()[i], es.state).CopyTo(newFunction(dest.orig.GetFunctionTable()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.Function, srcLen)
 	wrappers := make([]*otlpprofiles.Function, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetFunctionTable() {
 		wrappers[i] = &origs[i]
-		newFunction((*es.orig)[i], es.state).CopyTo(newFunction(wrappers[i], dest.state))
+		newFunction(es.orig.GetFunctionTable()[i], es.state).CopyTo(newFunction(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetFunctionTable(wrappers)
 }
 
 // Sort sorts the Function elements within FunctionSlice given the
@@ -150,5 +157,5 @@ func (es FunctionSlice) CopyTo(dest FunctionSlice) {
 // can be compared.
 func (es FunctionSlice) Sort(less func(a, b Function) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetFunctionTable(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

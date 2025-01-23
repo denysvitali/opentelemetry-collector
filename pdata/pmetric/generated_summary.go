@@ -9,9 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 // Summary represents the type of a metric that is calculated by aggregating as a Summary of all reported double measurements over a time interval.
@@ -51,11 +56,7 @@ func (ms Summary) MoveTo(dest Summary) {
 // DataPoints returns the DataPoints associated with this Summary.
 // accessorSliceTemplate
 func (ms Summary) DataPoints() SummaryDataPointSlice {
-	if ms.orig.GetDataPoints() == nil {
-		ms.orig.SetDataPoints(utils.GetEmptyPointer(ms.orig.GetDataPoints()))
-	}
-	sl := ms.orig.GetDataPoints()
-	return newSummaryDataPointSlice(&sl, ms.state)
+	return newSummaryDataPointSlice(ms.orig, ms.state)
 }
 
 // CopyTo copies all properties from the current struct overriding the destination.

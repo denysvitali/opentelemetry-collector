@@ -12,8 +12,19 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// LogRecordSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type LogRecordSliceAccessor interface {
+	SetLogRecords([]*otlplogs.LogRecord)
+	GetLogRecords() []*otlplogs.LogRecord
+}
 
 // LogRecordSlice logically represents a slice of LogRecord.
 //
@@ -23,27 +34,26 @@ import (
 // Must use NewLogRecordSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type LogRecordSlice struct {
-	orig  *[]*otlplogs.LogRecord
+	orig  LogRecordSliceAccessor
 	state *internal.State
 }
 
-func newLogRecordSlice(orig *[]*otlplogs.LogRecord, state *internal.State) LogRecordSlice {
+func newLogRecordSlice(orig LogRecordSliceAccessor, state *internal.State) LogRecordSlice {
 	return LogRecordSlice{orig: orig, state: state}
 }
 
 // NewLogRecordSlice creates a LogRecordSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewLogRecordSlice() LogRecordSlice {
-	orig := []*otlplogs.LogRecord(nil)
 	state := internal.StateMutable
-	return newLogRecordSlice(&orig, &state)
+	return newLogRecordSlice(&otlplogs.ScopeLogs{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewLogRecordSlice()".
 func (es LogRecordSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetLogRecords())
 }
 
 // At returns the element at the given index.
@@ -55,7 +65,7 @@ func (es LogRecordSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es LogRecordSlice) At(i int) LogRecord {
-	return newLogRecord((*es.orig)[i], es.state)
+	return newLogRecord(es.orig.GetLogRecords()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +82,21 @@ func (es LogRecordSlice) At(i int) LogRecord {
 //	}
 func (es LogRecordSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetLogRecords())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlplogs.LogRecord, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlplogs.LogRecord, len(es.orig.GetLogRecords()), newCap)
+	copy(newOrig, es.orig.GetLogRecords())
+	es.orig.SetLogRecords(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty LogRecord.
 // It returns the newly added LogRecord.
 func (es LogRecordSlice) AppendEmpty() LogRecord {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlplogs.LogRecord{})
+	es.orig.SetLogRecords(append(es.orig.GetLogRecords(), &otlplogs.LogRecord{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +105,13 @@ func (es LogRecordSlice) AppendEmpty() LogRecord {
 func (es LogRecordSlice) MoveAndAppendTo(dest LogRecordSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetLogRecords() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetLogRecords(es.orig.GetLogRecords())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetLogRecords(append(dest.orig.GetLogRecords(), es.orig.GetLogRecords()...))
 	}
-	*es.orig = nil
+	es.orig.SetLogRecords(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +119,7 @@ func (es LogRecordSlice) MoveAndAppendTo(dest LogRecordSlice) {
 func (es LogRecordSlice) RemoveIf(f func(LogRecord) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetLogRecords()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +128,31 @@ func (es LogRecordSlice) RemoveIf(f func(LogRecord) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetLogRecords()[newLen] = es.orig.GetLogRecords()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetLogRecords(es.orig.GetLogRecords()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es LogRecordSlice) CopyTo(dest LogRecordSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetLogRecords())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newLogRecord((*es.orig)[i], es.state).CopyTo(newLogRecord((*dest.orig)[i], dest.state))
+		dest.orig.SetLogRecords(dest.orig.GetLogRecords()[:srcLen:destCap])
+		for i := range es.orig.GetLogRecords() {
+			newLogRecord(es.orig.GetLogRecords()[i], es.state).CopyTo(newLogRecord(dest.orig.GetLogRecords()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlplogs.LogRecord, srcLen)
 	wrappers := make([]*otlplogs.LogRecord, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetLogRecords() {
 		wrappers[i] = &origs[i]
-		newLogRecord((*es.orig)[i], es.state).CopyTo(newLogRecord(wrappers[i], dest.state))
+		newLogRecord(es.orig.GetLogRecords()[i], es.state).CopyTo(newLogRecord(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetLogRecords(wrappers)
 }
 
 // Sort sorts the LogRecord elements within LogRecordSlice given the
@@ -150,5 +160,5 @@ func (es LogRecordSlice) CopyTo(dest LogRecordSlice) {
 // can be compared.
 func (es LogRecordSlice) Sort(less func(a, b LogRecord) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetLogRecords(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

@@ -9,14 +9,15 @@
 package pprofile
 
 import (
-	"testing"
+"testing"
+"unsafe"
 
-	"github.com/stretchr/testify/assert"
+"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/collector/pdata/internal"
-	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+"go.opentelemetry.io/collector/pdata/internal"
+otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+"go.opentelemetry.io/collector/pdata/pcommon"
+
 )
 
 func TestLocation_MoveTo(t *testing.T) {
@@ -42,6 +43,7 @@ func TestLocation_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newLocation(&otlpprofiles.Location{}, &sharedState)) })
 }
 
+
 func TestLocation_MappingIndex(t *testing.T) {
 	ms := NewLocation()
 	assert.Equal(t, int32(0), ms.MappingIndex())
@@ -51,6 +53,7 @@ func TestLocation_MappingIndex(t *testing.T) {
 	ms.RemoveMappingIndex()
 	assert.False(t, ms.HasMappingIndex())
 }
+
 
 func TestLocation_Address(t *testing.T) {
 	ms := NewLocation()
@@ -84,6 +87,7 @@ func TestLocation_AttributeIndices(t *testing.T) {
 	assert.Equal(t, pcommon.Int32Slice(internal.GenerateTestInt32Slice()), ms.AttributeIndices())
 }
 
+
 func generateTestLocation() Location {
 	tv := NewLocation()
 	fillTestLocation(tv)
@@ -91,9 +95,10 @@ func generateTestLocation() Location {
 }
 
 func fillTestLocation(tv Location) {
-	tv.orig.SetMappingIndex(int32(1))
-	tv.orig.SetAddress(uint64(1))
-	fillTestLineSlice(newLineSlice(utils.Ref(tv.orig.GetLine()), tv.state))
-	tv.orig.SetIsFolded(true)
-	internal.FillTestInt32Slice(internal.NewInt32Slice(utils.Ref(tv.orig.GetAttributeIndices()), tv.state))
+		tv.orig.SetMappingIndex(int32(1))
+		tv.orig.SetAddress(uint64(1))
+	fillTestLineSlice(newLineSlice(&{}, tv.state))
+		tv.orig.SetIsFolded(true)
+	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
 }
+

@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSampleSlice(t *testing.T) {
 	es := NewSampleSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSampleSlice(&[]*otlpprofiles.Sample{}, &state)
+	es = newSampleSlice(&otlpprofiles.Profile{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSample()
@@ -38,7 +39,7 @@ func TestSampleSlice(t *testing.T) {
 
 func TestSampleSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSampleSlice(&[]*otlpprofiles.Sample{}, &sharedState)
+	es := newSampleSlice(&otlpprofiles.Profile{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestSampleSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetSample()))
 	assert.Equal(t, generateTestSampleSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSampleSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetSample()))
 	assert.Equal(t, generateTestSampleSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestSampleSlice() SampleSlice {
 }
 
 func fillTestSampleSlice(es SampleSlice) {
-	*es.orig = make([]*otlpprofiles.Sample, 7)
+	es.orig.SetSample(make([]*otlpprofiles.Sample, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.Sample{}
-		fillTestSample(newSample((*es.orig)[i], es.state))
+		es.orig.GetSample()[i] = &otlpprofiles.Sample{}
+		fillTestSample(newSample(es.orig.GetSample()[i], es.state))
 	}
 }

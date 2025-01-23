@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestMappingSlice(t *testing.T) {
 	es := NewMappingSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newMappingSlice(&[]*otlpprofiles.Mapping{}, &state)
+	es = newMappingSlice(&otlpprofiles.Profile{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewMapping()
@@ -38,7 +39,7 @@ func TestMappingSlice(t *testing.T) {
 
 func TestMappingSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newMappingSlice(&[]*otlpprofiles.Mapping{}, &sharedState)
+	es := newMappingSlice(&otlpprofiles.Profile{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestMappingSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetMappingTable()))
 	assert.Equal(t, generateTestMappingSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestMappingSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetMappingTable()))
 	assert.Equal(t, generateTestMappingSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestMappingSlice() MappingSlice {
 }
 
 func fillTestMappingSlice(es MappingSlice) {
-	*es.orig = make([]*otlpprofiles.Mapping, 7)
+	es.orig.SetMappingTable(make([]*otlpprofiles.Mapping, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.Mapping{}
-		fillTestMapping(newMapping((*es.orig)[i], es.state))
+		es.orig.GetMappingTable()[i] = &otlpprofiles.Mapping{}
+		fillTestMapping(newMapping(es.orig.GetMappingTable()[i], es.state))
 	}
 }

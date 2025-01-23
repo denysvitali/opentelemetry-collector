@@ -16,13 +16,14 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestProfilesSlice(t *testing.T) {
 	es := NewProfilesSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newProfilesSlice(&[]*otlpprofiles.Profile{}, &state)
+	es = newProfilesSlice(&otlpprofiles.ScopeProfiles{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewProfile()
@@ -38,7 +39,7 @@ func TestProfilesSlice(t *testing.T) {
 
 func TestProfilesSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newProfilesSlice(&[]*otlpprofiles.Profile{}, &sharedState)
+	es := newProfilesSlice(&otlpprofiles.ScopeProfiles{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +72,14 @@ func TestProfilesSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetProfiles()))
 	assert.Equal(t, generateTestProfilesSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestProfilesSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetProfiles()))
 	assert.Equal(t, generateTestProfilesSlice(), es)
 }
 
@@ -148,9 +149,9 @@ func generateTestProfilesSlice() ProfilesSlice {
 }
 
 func fillTestProfilesSlice(es ProfilesSlice) {
-	*es.orig = make([]*otlpprofiles.Profile, 7)
+	es.orig.SetProfiles(make([]*otlpprofiles.Profile, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpprofiles.Profile{}
-		fillTestProfile(newProfile((*es.orig)[i], es.state))
+		es.orig.GetProfiles()[i] = &otlpprofiles.Profile{}
+		fillTestProfile(newProfile(es.orig.GetProfiles()[i], es.state))
 	}
 }

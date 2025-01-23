@@ -12,8 +12,20 @@ import (
 	"sort"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// SpanEventSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type SpanEventSliceAccessor interface {
+	SetEvents([]*otlptrace.Span_Event)
+	GetEvents() []*otlptrace.Span_Event
+}
 
 // SpanEventSlice logically represents a slice of SpanEvent.
 //
@@ -23,27 +35,26 @@ import (
 // Must use NewSpanEventSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type SpanEventSlice struct {
-	orig  *[]*otlptrace.Span_Event
+	orig  SpanEventSliceAccessor
 	state *internal.State
 }
 
-func newSpanEventSlice(orig *[]*otlptrace.Span_Event, state *internal.State) SpanEventSlice {
+func newSpanEventSlice(orig SpanEventSliceAccessor, state *internal.State) SpanEventSlice {
 	return SpanEventSlice{orig: orig, state: state}
 }
 
 // NewSpanEventSlice creates a SpanEventSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewSpanEventSlice() SpanEventSlice {
-	orig := []*otlptrace.Span_Event(nil)
 	state := internal.StateMutable
-	return newSpanEventSlice(&orig, &state)
+	return newSpanEventSlice(&otlptrace.Span{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewSpanEventSlice()".
 func (es SpanEventSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetEvents())
 }
 
 // At returns the element at the given index.
@@ -55,7 +66,7 @@ func (es SpanEventSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es SpanEventSlice) At(i int) SpanEvent {
-	return newSpanEvent((*es.orig)[i], es.state)
+	return newSpanEvent(es.orig.GetEvents()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +83,21 @@ func (es SpanEventSlice) At(i int) SpanEvent {
 //	}
 func (es SpanEventSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetEvents())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlptrace.Span_Event, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlptrace.Span_Event, len(es.orig.GetEvents()), newCap)
+	copy(newOrig, es.orig.GetEvents())
+	es.orig.SetEvents(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty SpanEvent.
 // It returns the newly added SpanEvent.
 func (es SpanEventSlice) AppendEmpty() SpanEvent {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlptrace.Span_Event{})
+	es.orig.SetEvents(append(es.orig.GetEvents(), &otlptrace.Span_Event{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +106,13 @@ func (es SpanEventSlice) AppendEmpty() SpanEvent {
 func (es SpanEventSlice) MoveAndAppendTo(dest SpanEventSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetEvents() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetEvents(es.orig.GetEvents())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetEvents(append(dest.orig.GetEvents(), es.orig.GetEvents()...))
 	}
-	*es.orig = nil
+	es.orig.SetEvents(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +120,7 @@ func (es SpanEventSlice) MoveAndAppendTo(dest SpanEventSlice) {
 func (es SpanEventSlice) RemoveIf(f func(SpanEvent) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetEvents()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +129,31 @@ func (es SpanEventSlice) RemoveIf(f func(SpanEvent) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetEvents()[newLen] = es.orig.GetEvents()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetEvents(es.orig.GetEvents()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es SpanEventSlice) CopyTo(dest SpanEventSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetEvents())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newSpanEvent((*es.orig)[i], es.state).CopyTo(newSpanEvent((*dest.orig)[i], dest.state))
+		dest.orig.SetEvents(dest.orig.GetEvents()[:srcLen:destCap])
+		for i := range es.orig.GetEvents() {
+			newSpanEvent(es.orig.GetEvents()[i], es.state).CopyTo(newSpanEvent(dest.orig.GetEvents()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlptrace.Span_Event, srcLen)
 	wrappers := make([]*otlptrace.Span_Event, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetEvents() {
 		wrappers[i] = &origs[i]
-		newSpanEvent((*es.orig)[i], es.state).CopyTo(newSpanEvent(wrappers[i], dest.state))
+		newSpanEvent(es.orig.GetEvents()[i], es.state).CopyTo(newSpanEvent(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetEvents(wrappers)
 }
 
 // Sort sorts the SpanEvent elements within SpanEventSlice given the
@@ -150,5 +161,5 @@ func (es SpanEventSlice) CopyTo(dest SpanEventSlice) {
 // can be compared.
 func (es SpanEventSlice) Sort(less func(a, b SpanEvent) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetEvents(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }

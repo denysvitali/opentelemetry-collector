@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSpanSlice(t *testing.T) {
 	es := NewSpanSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newSpanSlice(&[]*otlptrace.Span{}, &state)
+	es = newSpanSlice(&otlptrace.ScopeSpans{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewSpan()
@@ -38,7 +40,7 @@ func TestSpanSlice(t *testing.T) {
 
 func TestSpanSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newSpanSlice(&[]*otlptrace.Span{}, &sharedState)
+	es := newSpanSlice(&otlptrace.ScopeSpans{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestSpanSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetSpans()))
 	assert.Equal(t, generateTestSpanSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestSpanSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetSpans()))
 	assert.Equal(t, generateTestSpanSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestSpanSlice() SpanSlice {
 }
 
 func fillTestSpanSlice(es SpanSlice) {
-	*es.orig = make([]*otlptrace.Span, 7)
+	es.orig.SetSpans(make([]*otlptrace.Span, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlptrace.Span{}
-		fillTestSpan(newSpan((*es.orig)[i], es.state))
+		es.orig.GetSpans()[i] = &otlptrace.Span{}
+		fillTestSpan(newSpan(es.orig.GetSpans()[i], es.state))
 	}
 }

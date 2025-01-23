@@ -9,8 +9,11 @@
 package internal
 
 import (
+	"go.opentelemetry.io/collector/pdata/internal"
+
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
+
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 )
 
 type InstrumentationScope struct {
@@ -44,6 +47,6 @@ func GenerateTestInstrumentationScope() InstrumentationScope {
 func FillTestInstrumentationScope(tv InstrumentationScope) {
 	tv.orig.SetName("test_name")
 	tv.orig.SetVersion("test_version")
-	FillTestMap(NewMap(utils.Ref(tv.orig.GetAttributes()), tv.state))
+	FillTestMap(NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
 	tv.orig.SetDroppedAttributesCount(uint32(17))
 }

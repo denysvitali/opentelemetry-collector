@@ -14,6 +14,7 @@ var ptrace = &Package{
 			`"go.opentelemetry.io/collector/pdata/internal/data"`,
 			`otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"`,
 			`otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"`,
+			`otlpcollectortrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/trace/v1"`,
 			`otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"`,
 			`"go.opentelemetry.io/collector/pdata/pcommon"`,
 		},
@@ -47,6 +48,7 @@ var ptrace = &Package{
 var resourceSpansSlice = &sliceOfPtrs{
 	structName: "ResourceSpansSlice",
 	element:    resourceSpans,
+	parentType: "otlpcollectortrace.ExportTraceServiceRequest",
 }
 
 var resourceSpans = &messageValueStruct{
@@ -66,6 +68,7 @@ var resourceSpans = &messageValueStruct{
 var scopeSpansSlice = &sliceOfPtrs{
 	structName: "ScopeSpansSlice",
 	element:    scopeSpans,
+	parentType: "otlptrace.ResourceSpans",
 }
 
 var scopeSpans = &messageValueStruct{
@@ -85,6 +88,7 @@ var scopeSpans = &messageValueStruct{
 var spanSlice = &sliceOfPtrs{
 	structName: "SpanSlice",
 	element:    span,
+	parentType: "otlptrace.ScopeSpans",
 }
 
 var flagsField = &primitiveField{
@@ -147,8 +151,10 @@ var span = &messageValueStruct{
 }
 
 var spanEventSlice = &sliceOfPtrs{
-	structName: "SpanEventSlice",
-	element:    spanEvent,
+	structName:    "SpanEventSlice",
+	element:       spanEvent,
+	fieldAccessor: "Events",
+	parentType:    "otlptrace.Span",
 }
 
 var spanEvent = &messageValueStruct{
@@ -167,6 +173,7 @@ var spanEvent = &messageValueStruct{
 var spanLinkSlice = &sliceOfPtrs{
 	structName: "SpanLinkSlice",
 	element:    spanLink,
+	parentType: "otlptrace.Span",
 }
 
 var spanLink = &messageValueStruct{

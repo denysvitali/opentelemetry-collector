@@ -15,14 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestExponentialHistogramDataPointSlice(t *testing.T) {
 	es := NewExponentialHistogramDataPointSlice()
 	assert.Equal(t, 0, es.Len())
 	state := internal.StateMutable
-	es = newExponentialHistogramDataPointSlice(&[]*otlpmetrics.ExponentialHistogramDataPoint{}, &state)
+	es = newExponentialHistogramDataPointSlice(&otlpmetric.ExponentialHistogram{}, &state)
 	assert.Equal(t, 0, es.Len())
 
 	emptyVal := NewExponentialHistogramDataPoint()
@@ -38,7 +40,7 @@ func TestExponentialHistogramDataPointSlice(t *testing.T) {
 
 func TestExponentialHistogramDataPointSliceReadOnly(t *testing.T) {
 	sharedState := internal.StateReadOnly
-	es := newExponentialHistogramDataPointSlice(&[]*otlpmetrics.ExponentialHistogramDataPoint{}, &sharedState)
+	es := newExponentialHistogramDataPointSlice(&otlpmetric.ExponentialHistogram{}, &sharedState)
 	assert.Equal(t, 0, es.Len())
 	assert.Panics(t, func() { es.AppendEmpty() })
 	assert.Panics(t, func() { es.EnsureCapacity(2) })
@@ -71,14 +73,14 @@ func TestExponentialHistogramDataPointSlice_EnsureCapacity(t *testing.T) {
 	const ensureSmallLen = 4
 	es.EnsureCapacity(ensureSmallLen)
 	assert.Less(t, ensureSmallLen, es.Len())
-	assert.Equal(t, es.Len(), cap(*es.orig))
+	assert.Equal(t, es.Len(), cap(es.orig.GetExponentialHistogramDataPoints()))
 	assert.Equal(t, generateTestExponentialHistogramDataPointSlice(), es)
 
 	// Test ensure larger capacity
 	const ensureLargeLen = 9
 	es.EnsureCapacity(ensureLargeLen)
 	assert.Less(t, generateTestExponentialHistogramDataPointSlice().Len(), ensureLargeLen)
-	assert.Equal(t, ensureLargeLen, cap(*es.orig))
+	assert.Equal(t, ensureLargeLen, cap(es.orig.GetExponentialHistogramDataPoints()))
 	assert.Equal(t, generateTestExponentialHistogramDataPointSlice(), es)
 }
 
@@ -148,9 +150,9 @@ func generateTestExponentialHistogramDataPointSlice() ExponentialHistogramDataPo
 }
 
 func fillTestExponentialHistogramDataPointSlice(es ExponentialHistogramDataPointSlice) {
-	*es.orig = make([]*otlpmetrics.ExponentialHistogramDataPoint, 7)
+	es.orig.SetExponentialHistogramDataPoints(make([]*otlpmetrics.ExponentialHistogramDataPoint, 7))
 	for i := 0; i < 7; i++ {
-		(*es.orig)[i] = &otlpmetrics.ExponentialHistogramDataPoint{}
-		fillTestExponentialHistogramDataPoint(newExponentialHistogramDataPoint((*es.orig)[i], es.state))
+		es.orig.GetExponentialHistogramDataPoints()[i] = &otlpmetrics.ExponentialHistogramDataPoint{}
+		fillTestExponentialHistogramDataPoint(newExponentialHistogramDataPoint(es.orig.GetExponentialHistogramDataPoints()[i], es.state))
 	}
 }

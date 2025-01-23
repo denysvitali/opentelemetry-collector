@@ -9,10 +9,14 @@
 package pmetric
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pcommon/utils"
 )
 
 // NumberDataPoint is a single data point in a timeseries that describes the time-varying value of a number metric.
@@ -52,9 +56,6 @@ func (ms NumberDataPoint) MoveTo(dest NumberDataPoint) {
 // Attributes returns the Attributes associated with this NumberDataPoint.
 // accessorSliceTemplate
 func (ms NumberDataPoint) Attributes() pcommon.Map {
-	if ms.orig.GetAttributes() == nil {
-		ms.orig.SetAttributes(utils.GetEmptyPointer(ms.orig.GetAttributes()))
-	}
 	return pcommon.Map(internal.NewMap(utils.Ref(ms.orig.GetAttributes()), ms.state))
 }
 
@@ -117,10 +118,7 @@ func (ms NumberDataPoint) SetIntValue(v int64) {
 // Exemplars returns the Exemplars associated with this NumberDataPoint.
 // accessorSliceTemplate
 func (ms NumberDataPoint) Exemplars() ExemplarSlice {
-	if ms.orig.GetExemplars() == nil {
-	}
-	sl := ms.orig.GetExemplars()
-	return newExemplarSlice(&sl, ms.state)
+	return newExemplarSlice(ms.orig, ms.state)
 }
 
 // Flags returns the flags associated with this NumberDataPoint.

@@ -9,11 +9,19 @@
 package pprofile
 
 import (
-	"sort"
-
 	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ResourceProfilesSliceAccessor is a slice accessor that is used to solve the problem
+// of accessing the slice using the Protobuf Opaque API
+type ResourceProfilesSliceAccessor interface {
+	SetResourceProfiles([]*otlpprofiles.ResourceProfiles)
+	GetResourceProfiles() []*otlpprofiles.ResourceProfiles
+}
 
 // ResourceProfilesSlice logically represents a slice of ResourceProfiles.
 //
@@ -23,27 +31,26 @@ import (
 // Must use NewResourceProfilesSlice function to create new instances.
 // Important: zero-initialized instance is not valid for use.
 type ResourceProfilesSlice struct {
-	orig  *[]*otlpprofiles.ResourceProfiles
+	orig  ResourceProfilesSliceAccessor
 	state *internal.State
 }
 
-func newResourceProfilesSlice(orig *[]*otlpprofiles.ResourceProfiles, state *internal.State) ResourceProfilesSlice {
+func newResourceProfilesSlice(orig ResourceProfilesSliceAccessor, state *internal.State) ResourceProfilesSlice {
 	return ResourceProfilesSlice{orig: orig, state: state}
 }
 
 // NewResourceProfilesSlice creates a ResourceProfilesSlice with 0 elements.
 // Can use "EnsureCapacity" to initialize with a given capacity.
 func NewResourceProfilesSlice() ResourceProfilesSlice {
-	orig := []*otlpprofiles.ResourceProfiles(nil)
 	state := internal.StateMutable
-	return newResourceProfilesSlice(&orig, &state)
+	return newResourceProfilesSlice(&otlpprofiles.ExportProfileServiceRequest{}, &state)
 }
 
 // Len returns the number of elements in the slice.
 //
 // Returns "0" for a newly instance created with "NewResourceProfilesSlice()".
 func (es ResourceProfilesSlice) Len() int {
-	return len(*es.orig)
+	return len(es.orig.GetResourceProfiles())
 }
 
 // At returns the element at the given index.
@@ -55,7 +62,7 @@ func (es ResourceProfilesSlice) Len() int {
 //	    ... // Do something with the element
 //	}
 func (es ResourceProfilesSlice) At(i int) ResourceProfiles {
-	return newResourceProfiles((*es.orig)[i], es.state)
+	return newResourceProfiles(es.orig.GetResourceProfiles()[i], es.state)
 }
 
 // EnsureCapacity is an operation that ensures the slice has at least the specified capacity.
@@ -72,21 +79,21 @@ func (es ResourceProfilesSlice) At(i int) ResourceProfiles {
 //	}
 func (es ResourceProfilesSlice) EnsureCapacity(newCap int) {
 	es.state.AssertMutable()
-	oldCap := cap(*es.orig)
+	oldCap := cap(es.orig.GetResourceProfiles())
 	if newCap <= oldCap {
 		return
 	}
 
-	newOrig := make([]*otlpprofiles.ResourceProfiles, len(*es.orig), newCap)
-	copy(newOrig, *es.orig)
-	*es.orig = newOrig
+	newOrig := make([]*otlpprofiles.ResourceProfiles, len(es.orig.GetResourceProfiles()), newCap)
+	copy(newOrig, es.orig.GetResourceProfiles())
+	es.orig.SetResourceProfiles(newOrig)
 }
 
 // AppendEmpty will append to the end of the slice an empty ResourceProfiles.
 // It returns the newly added ResourceProfiles.
 func (es ResourceProfilesSlice) AppendEmpty() ResourceProfiles {
 	es.state.AssertMutable()
-	*es.orig = append(*es.orig, &otlpprofiles.ResourceProfiles{})
+	es.orig.SetResourceProfiles(append(es.orig.GetResourceProfiles(), &otlpprofiles.ResourceProfiles{}))
 	return es.At(es.Len() - 1)
 }
 
@@ -95,13 +102,13 @@ func (es ResourceProfilesSlice) AppendEmpty() ResourceProfiles {
 func (es ResourceProfilesSlice) MoveAndAppendTo(dest ResourceProfilesSlice) {
 	es.state.AssertMutable()
 	dest.state.AssertMutable()
-	if *dest.orig == nil {
+	if dest.orig.GetResourceProfiles() == nil {
 		// We can simply move the entire vector and avoid any allocations.
-		*dest.orig = *es.orig
+		dest.orig.SetResourceProfiles(es.orig.GetResourceProfiles())
 	} else {
-		*dest.orig = append(*dest.orig, *es.orig...)
+		dest.orig.SetResourceProfiles(append(dest.orig.GetResourceProfiles(), es.orig.GetResourceProfiles()...))
 	}
-	*es.orig = nil
+	es.orig.SetResourceProfiles(nil)
 }
 
 // RemoveIf calls f sequentially for each element present in the slice.
@@ -109,7 +116,7 @@ func (es ResourceProfilesSlice) MoveAndAppendTo(dest ResourceProfilesSlice) {
 func (es ResourceProfilesSlice) RemoveIf(f func(ResourceProfiles) bool) {
 	es.state.AssertMutable()
 	newLen := 0
-	for i := 0; i < len(*es.orig); i++ {
+	for i := 0; i < len(es.orig.GetResourceProfiles()); i++ {
 		if f(es.At(i)) {
 			continue
 		}
@@ -118,31 +125,31 @@ func (es ResourceProfilesSlice) RemoveIf(f func(ResourceProfiles) bool) {
 			newLen++
 			continue
 		}
-		(*es.orig)[newLen] = (*es.orig)[i]
+		es.orig.GetResourceProfiles()[newLen] = es.orig.GetResourceProfiles()[i]
 		newLen++
 	}
-	*es.orig = (*es.orig)[:newLen]
+	es.orig.SetResourceProfiles(es.orig.GetResourceProfiles()[:newLen])
 }
 
 // CopyTo copies all elements from the current slice overriding the destination.
 func (es ResourceProfilesSlice) CopyTo(dest ResourceProfilesSlice) {
 	dest.state.AssertMutable()
 	srcLen := es.Len()
-	destCap := cap(*dest.orig)
+	destCap := cap(dest.orig.GetResourceProfiles())
 	if srcLen <= destCap {
-		(*dest.orig) = (*dest.orig)[:srcLen:destCap]
-		for i := range *es.orig {
-			newResourceProfiles((*es.orig)[i], es.state).CopyTo(newResourceProfiles((*dest.orig)[i], dest.state))
+		dest.orig.SetResourceProfiles(dest.orig.GetResourceProfiles()[:srcLen:destCap])
+		for i := range es.orig.GetResourceProfiles() {
+			newResourceProfiles(es.orig.GetResourceProfiles()[i], es.state).CopyTo(newResourceProfiles(dest.orig.GetResourceProfiles()[i], dest.state))
 		}
 		return
 	}
 	origs := make([]otlpprofiles.ResourceProfiles, srcLen)
 	wrappers := make([]*otlpprofiles.ResourceProfiles, srcLen)
-	for i := range *es.orig {
+	for i := range es.orig.GetResourceProfiles() {
 		wrappers[i] = &origs[i]
-		newResourceProfiles((*es.orig)[i], es.state).CopyTo(newResourceProfiles(wrappers[i], dest.state))
+		newResourceProfiles(es.orig.GetResourceProfiles()[i], es.state).CopyTo(newResourceProfiles(wrappers[i], dest.state))
 	}
-	*dest.orig = wrappers
+	dest.orig.SetResourceProfiles(wrappers)
 }
 
 // Sort sorts the ResourceProfiles elements within ResourceProfilesSlice given the
@@ -150,5 +157,5 @@ func (es ResourceProfilesSlice) CopyTo(dest ResourceProfilesSlice) {
 // can be compared.
 func (es ResourceProfilesSlice) Sort(less func(a, b ResourceProfiles) bool) {
 	es.state.AssertMutable()
-	sort.SliceStable(*es.orig, func(i, j int) bool { return less(es.At(i), es.At(j)) })
+	sort.SliceStable(es.orig.GetResourceProfiles(), func(i, j int) bool { return less(es.At(i), es.At(j)) })
 }
