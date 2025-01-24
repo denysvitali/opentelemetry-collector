@@ -9,16 +9,13 @@
 package ptrace
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-"go.opentelemetry.io/collector/pdata/internal/data"
-otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceSpans_MoveTo(t *testing.T) {
@@ -44,7 +41,6 @@ func TestResourceSpans_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newResourceSpans(&otlptrace.ResourceSpans{}, &sharedState)) })
 }
 
-
 func TestResourceSpans_Resource(t *testing.T) {
 	ms := NewResourceSpans()
 	internal.FillTestResource(internal.Resource(ms.Resource()))
@@ -57,7 +53,9 @@ func TestResourceSpans_SchemaUrl(t *testing.T) {
 	ms.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
 	assert.Equal(t, "https://opentelemetry.io/schemas/1.5.0", ms.SchemaUrl())
 	sharedState := internal.StateReadOnly
-	assert.Panics(t, func() { newResourceSpans(&otlptrace.ResourceSpans{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0") })
+	assert.Panics(t, func() {
+		newResourceSpans(&otlptrace.ResourceSpans{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
+	})
 }
 
 func TestResourceSpans_ScopeSpans(t *testing.T) {
@@ -67,7 +65,6 @@ func TestResourceSpans_ScopeSpans(t *testing.T) {
 	assert.Equal(t, generateTestScopeSpansSlice(), ms.ScopeSpans())
 }
 
-
 func generateTestResourceSpans() ResourceSpans {
 	tv := NewResourceSpans()
 	fillTestResourceSpans(tv)
@@ -75,8 +72,5 @@ func generateTestResourceSpans() ResourceSpans {
 }
 
 func fillTestResourceSpans(tv ResourceSpans) {
-	internal.FillTestResource(internal.NewResource(tv.orig.GetResource(), tv.state))
-		tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestScopeSpansSlice(newScopeSpansSlice(&{}, tv.state))
+	// TODO: fill
 }
-

@@ -441,6 +441,7 @@ var exemplar = &messageValueStruct{
 		&sliceField{
 			fieldName:   "FilteredAttributes",
 			returnSlice: mapStruct,
+			newType:     "*otlpcommon.KeyValue",
 		},
 		traceIDField,
 		spanIDField,

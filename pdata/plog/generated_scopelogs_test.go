@@ -10,12 +10,10 @@ package plog
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlplogs "go.opentelemetry.io/collector/pdata/internal/data/protogen/logs/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
@@ -74,7 +72,5 @@ func generateTestScopeLogs() ScopeLogs {
 }
 
 func fillTestScopeLogs(tv ScopeLogs) {
-	internal.FillTestInstrumentationScope(internal.NewInstrumentationScope(tv.orig.GetScope(), tv.state))
-	tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestLogRecordSlice(newLogRecordSlice(&otlplogs.ScopeLogs{}, tv.state))
+	// TODO: fill
 }

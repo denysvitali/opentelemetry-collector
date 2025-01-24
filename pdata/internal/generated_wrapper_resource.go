@@ -9,8 +9,6 @@
 package internal
 
 import (
-	"go.opentelemetry.io/collector/pdata/internal"
-
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 
 	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
@@ -44,7 +42,8 @@ func GenerateTestResource() Resource {
 	return tv
 }
 
-func FillTestResource(tv Resource) {
-	FillTestMap(NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
+func FillTestResource(tv Resource) *otlpresource.Resource {
+	tv.orig.SetAttributes(FillTestMap(NewMap(&[]*otlpcommon.KeyValue{}, tv.state)))
 	tv.orig.SetDroppedAttributesCount(uint32(17))
+	return tv.orig
 }

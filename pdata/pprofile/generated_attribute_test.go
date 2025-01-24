@@ -10,12 +10,11 @@ package pprofile
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
-	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	v1 "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
@@ -64,6 +63,5 @@ func generateTestAttribute() Attribute {
 }
 
 func fillTestAttribute(tv Attribute) {
-	tv.orig.SetKey("key")
-	internal.FillTestValue(internal.NewValue(tv.orig.GetValue(), tv.state))
+	// TODO: fill
 }

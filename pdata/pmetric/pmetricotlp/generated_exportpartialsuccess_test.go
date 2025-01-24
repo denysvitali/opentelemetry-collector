@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
+	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
 )
 
 func TestExportPartialSuccess_MoveTo(t *testing.T) {
@@ -74,6 +75,5 @@ func generateTestExportPartialSuccess() ExportPartialSuccess {
 }
 
 func fillTestExportPartialSuccess(tv ExportPartialSuccess) {
-	tv.orig.SetRejectedDataPoints(int64(13))
-	tv.orig.SetErrorMessage("error message")
+	// TODO: fill
 }

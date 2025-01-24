@@ -44,8 +44,9 @@ func GenerateTest{{ .structName }}() {{ .structName }} {
 	return tv
 }
 
-func FillTest{{ .structName }}(tv {{ .structName }}) {
+func FillTest{{ .structName }}(tv {{ .structName }}) *{{ .originName }} {
 	{{- range .fields }}
 	{{ .GenerateSetWithTestValue $.messageStruct }}
 	{{- end }}
+	return tv.orig
 }

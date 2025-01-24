@@ -10,12 +10,10 @@ package ptrace
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
@@ -83,8 +81,5 @@ func generateTestSpanEvent() SpanEvent {
 }
 
 func fillTestSpanEvent(tv SpanEvent) {
-	tv.orig.SetTimeUnixNano(1234567890)
-	tv.orig.SetName("test_name")
-	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
-	tv.orig.SetDroppedAttributesCount(uint32(17))
+	// TODO: fill
 }

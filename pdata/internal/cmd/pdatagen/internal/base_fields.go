@@ -45,18 +45,16 @@ const accessorsSliceTestTemplate = `func Test{{ .structName }}_{{ .fieldName }}(
 }`
 
 const setTestValueTemplate = `{{ if .isCommon -}}
-	{{ if not .isBaseStructCommon }}internal.{{ end }}FillTest{{ .returnType }}(
+	tv.orig.Set{{ .originFieldName }}(
+	{{- if not .isBaseStructCommon }}internal.{{ end }}FillTest{{ .returnType }}(
 	{{- if not .isBaseStructCommon }}internal.{{ end }}New
 	{{- else -}}
 	fillTest{{ .returnType }}(new
-	{{-	end -}}
-	{{ .returnType }}(
-	{{- if .isSlice -}}
-	&{{ .newType }}{}
-	{{- else -}}
-	tv.orig.Get{{ .originFieldName }}()
-	{{- end -}}
-	, tv.state))`
+	{{-	end -}}{{ .returnType }}(&{{- if .newType }}
+	{{ .newType }}
+	{{- else }}
+	{{ .originStructName }}
+	{{- end }}{}, tv.state)){{- if .isCommon -}}){{- end }}`
 
 const accessorsMessageValueTemplate = `// {{ .fieldName }} returns the {{ .lowerFieldName }} associated with this {{ .structName }}.
 // accessorsMessageValueTemplate

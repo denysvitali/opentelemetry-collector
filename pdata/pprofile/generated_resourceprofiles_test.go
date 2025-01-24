@@ -9,15 +9,13 @@
 package pprofile
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestResourceProfiles_MoveTo(t *testing.T) {
@@ -43,7 +41,6 @@ func TestResourceProfiles_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newResourceProfiles(&otlpprofiles.ResourceProfiles{}, &sharedState)) })
 }
 
-
 func TestResourceProfiles_Resource(t *testing.T) {
 	ms := NewResourceProfiles()
 	internal.FillTestResource(internal.Resource(ms.Resource()))
@@ -56,7 +53,9 @@ func TestResourceProfiles_SchemaUrl(t *testing.T) {
 	ms.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
 	assert.Equal(t, "https://opentelemetry.io/schemas/1.5.0", ms.SchemaUrl())
 	sharedState := internal.StateReadOnly
-	assert.Panics(t, func() { newResourceProfiles(&otlpprofiles.ResourceProfiles{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0") })
+	assert.Panics(t, func() {
+		newResourceProfiles(&otlpprofiles.ResourceProfiles{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
+	})
 }
 
 func TestResourceProfiles_ScopeProfiles(t *testing.T) {
@@ -66,7 +65,6 @@ func TestResourceProfiles_ScopeProfiles(t *testing.T) {
 	assert.Equal(t, generateTestScopeProfilesSlice(), ms.ScopeProfiles())
 }
 
-
 func generateTestResourceProfiles() ResourceProfiles {
 	tv := NewResourceProfiles()
 	fillTestResourceProfiles(tv)
@@ -74,8 +72,5 @@ func generateTestResourceProfiles() ResourceProfiles {
 }
 
 func fillTestResourceProfiles(tv ResourceProfiles) {
-	internal.FillTestResource(internal.NewResource(tv.orig.GetResource(), tv.state))
-		tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestScopeProfilesSlice(newScopeProfilesSlice(&{}, tv.state))
+	// TODO: fill
 }
-

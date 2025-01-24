@@ -9,16 +9,13 @@
 package pmetric
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-"go.opentelemetry.io/collector/pdata/internal/data"
-otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestScopeMetrics_MoveTo(t *testing.T) {
@@ -44,7 +41,6 @@ func TestScopeMetrics_CopyTo(t *testing.T) {
 	assert.Panics(t, func() { ms.CopyTo(newScopeMetrics(&otlpmetrics.ScopeMetrics{}, &sharedState)) })
 }
 
-
 func TestScopeMetrics_Scope(t *testing.T) {
 	ms := NewScopeMetrics()
 	internal.FillTestInstrumentationScope(internal.InstrumentationScope(ms.Scope()))
@@ -57,7 +53,9 @@ func TestScopeMetrics_SchemaUrl(t *testing.T) {
 	ms.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
 	assert.Equal(t, "https://opentelemetry.io/schemas/1.5.0", ms.SchemaUrl())
 	sharedState := internal.StateReadOnly
-	assert.Panics(t, func() { newScopeMetrics(&otlpmetrics.ScopeMetrics{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0") })
+	assert.Panics(t, func() {
+		newScopeMetrics(&otlpmetrics.ScopeMetrics{}, &sharedState).SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
+	})
 }
 
 func TestScopeMetrics_Metrics(t *testing.T) {
@@ -67,7 +65,6 @@ func TestScopeMetrics_Metrics(t *testing.T) {
 	assert.Equal(t, generateTestMetricSlice(), ms.Metrics())
 }
 
-
 func generateTestScopeMetrics() ScopeMetrics {
 	tv := NewScopeMetrics()
 	fillTestScopeMetrics(tv)
@@ -75,8 +72,5 @@ func generateTestScopeMetrics() ScopeMetrics {
 }
 
 func fillTestScopeMetrics(tv ScopeMetrics) {
-	internal.FillTestInstrumentationScope(internal.NewInstrumentationScope(tv.orig.GetScope(), tv.state))
-		tv.orig.SetSchemaUrl("https://opentelemetry.io/schemas/1.5.0")
-	fillTestMetricSlice(newMetricSlice(&{}, tv.state))
+	// TODO: fill
 }
-

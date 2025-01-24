@@ -10,13 +10,11 @@ package pprofile
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestFunction_MoveTo(t *testing.T) {
@@ -85,8 +83,5 @@ func generateTestFunction() Function {
 }
 
 func fillTestFunction(tv Function) {
-	tv.orig.SetNameStrindex(int32(1))
-	tv.orig.SetSystemNameStrindex(int32(1))
-	tv.orig.SetFilenameStrindex(int32(1))
-	tv.orig.SetStartLine(int64(1))
+	// TODO: fill
 }

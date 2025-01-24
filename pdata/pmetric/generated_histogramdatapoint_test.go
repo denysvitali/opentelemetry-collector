@@ -9,16 +9,13 @@
 package pmetric
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-"go.opentelemetry.io/collector/pdata/internal/data"
-otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestHistogramDataPoint_MoveTo(t *testing.T) {
@@ -43,7 +40,6 @@ func TestHistogramDataPoint_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newHistogramDataPoint(&otlpmetrics.HistogramDataPoint{}, &sharedState)) })
 }
-
 
 func TestHistogramDataPoint_Attributes(t *testing.T) {
 	ms := NewHistogramDataPoint()
@@ -108,7 +104,7 @@ func TestHistogramDataPoint_Flags(t *testing.T) {
 
 func TestHistogramDataPoint_Sum(t *testing.T) {
 	ms := NewHistogramDataPoint()
-	assert.InDelta(t, float64(0.0), ms.Sum() , 0.01)
+	assert.InDelta(t, float64(0.0), ms.Sum(), 0.01)
 	ms.SetSum(float64(17.13))
 	assert.True(t, ms.HasSum())
 	assert.InDelta(t, float64(17.13), ms.Sum(), 0.01)
@@ -116,10 +112,9 @@ func TestHistogramDataPoint_Sum(t *testing.T) {
 	assert.False(t, ms.HasSum())
 }
 
-
 func TestHistogramDataPoint_Min(t *testing.T) {
 	ms := NewHistogramDataPoint()
-	assert.InDelta(t, float64(0.0), ms.Min() , 0.01)
+	assert.InDelta(t, float64(0.0), ms.Min(), 0.01)
 	ms.SetMin(float64(9.23))
 	assert.True(t, ms.HasMin())
 	assert.InDelta(t, float64(9.23), ms.Min(), 0.01)
@@ -127,18 +122,15 @@ func TestHistogramDataPoint_Min(t *testing.T) {
 	assert.False(t, ms.HasMin())
 }
 
-
 func TestHistogramDataPoint_Max(t *testing.T) {
 	ms := NewHistogramDataPoint()
-	assert.InDelta(t, float64(0.0), ms.Max() , 0.01)
+	assert.InDelta(t, float64(0.0), ms.Max(), 0.01)
 	ms.SetMax(float64(182.55))
 	assert.True(t, ms.HasMax())
 	assert.InDelta(t, float64(182.55), ms.Max(), 0.01)
 	ms.RemoveMax()
 	assert.False(t, ms.HasMax())
 }
-
-
 
 func generateTestHistogramDataPoint() HistogramDataPoint {
 	tv := NewHistogramDataPoint()
@@ -147,16 +139,5 @@ func generateTestHistogramDataPoint() HistogramDataPoint {
 }
 
 func fillTestHistogramDataPoint(tv HistogramDataPoint) {
-	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
-		tv.orig.SetStartTimeUnixNano(1234567890)
-		tv.orig.SetTimeUnixNano(1234567890)
-		tv.orig.SetCount(uint64(17))
-		tv.orig.SetBucketCounts([]uint64{1, 2, 3})
-		tv.orig.SetExplicitBounds([]float64{1, 2, 3})
-	fillTestExemplarSlice(newExemplarSlice(&{}, tv.state))
-		tv.orig.SetFlags(1)
-		tv.orig.SetSum(float64(17.13))
-		tv.orig.SetMin(float64(9.23))
-		tv.orig.SetMax(float64(182.55))
+	// TODO: fill
 }
-

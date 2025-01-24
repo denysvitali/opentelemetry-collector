@@ -53,8 +53,11 @@ func generateTest{{ .structName }}() {{ .structName }} {
 
 {{ if not .isCommon -}}
 func fillTest{{ .structName }}(tv {{ .structName }}) {
-	{{- range .fields }}
-	{{ .GenerateSetWithTestValue $.messageStruct }}
-	{{- end }}
+	// TODO: fill
 }
+{{/*func fillTest{{ .structName }}(tv {{ .structName }}) {*/}}
+{{/*	{{- range .fields }}*/}}
+{{/*	{{ .GenerateSetWithTestValue $.messageStruct }}*/}}
+{{/*	{{- end }}*/}}
+{{/*}*/}}
 {{ end }}

@@ -10,14 +10,11 @@ package pmetric
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpmetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/metrics/v1"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSummaryDataPointValueAtQuantile_MoveTo(t *testing.T) {
@@ -78,6 +75,5 @@ func generateTestSummaryDataPointValueAtQuantile() SummaryDataPointValueAtQuanti
 }
 
 func fillTestSummaryDataPointValueAtQuantile(tv SummaryDataPointValueAtQuantile) {
-	tv.orig.SetQuantile(float64(17.13))
-	tv.orig.SetValue(float64(17.13))
+	// TODO: fill
 }

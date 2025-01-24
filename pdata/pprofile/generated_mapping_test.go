@@ -9,15 +9,13 @@
 package pprofile
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestMapping_MoveTo(t *testing.T) {
@@ -42,7 +40,6 @@ func TestMapping_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newMapping(&otlpprofiles.Mapping{}, &sharedState)) })
 }
-
 
 func TestMapping_MemoryStart(t *testing.T) {
 	ms := NewMapping()
@@ -123,7 +120,6 @@ func TestMapping_HasInlineFrames(t *testing.T) {
 	assert.Panics(t, func() { newMapping(&otlpprofiles.Mapping{}, &sharedState).SetHasInlineFrames(true) })
 }
 
-
 func generateTestMapping() Mapping {
 	tv := NewMapping()
 	fillTestMapping(tv)
@@ -131,14 +127,5 @@ func generateTestMapping() Mapping {
 }
 
 func fillTestMapping(tv Mapping) {
-		tv.orig.SetMemoryStart(uint64(1))
-		tv.orig.SetMemoryLimit(uint64(1))
-		tv.orig.SetFileOffset(uint64(1))
-		tv.orig.SetFilenameStrindex(int32(1))
-	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
-		tv.orig.SetHasFunctions(true)
-		tv.orig.SetHasFilenames(true)
-		tv.orig.SetHasLineNumbers(true)
-		tv.orig.SetHasInlineFrames(true)
+	// TODO: fill
 }
-

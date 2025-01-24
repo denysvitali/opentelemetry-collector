@@ -10,13 +10,11 @@ package pprofile
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/pdata/internal"
 	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestAttributeUnit_MoveTo(t *testing.T) {
@@ -69,6 +67,5 @@ func generateTestAttributeUnit() AttributeUnit {
 }
 
 func fillTestAttributeUnit(tv AttributeUnit) {
-	tv.orig.SetAttributeKeyStrindex(int32(1))
-	tv.orig.SetUnitStrindex(int32(1))
+	// TODO: fill
 }

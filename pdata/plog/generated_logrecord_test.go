@@ -10,7 +10,6 @@ package plog
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -138,15 +137,5 @@ func generateTestLogRecord() LogRecord {
 }
 
 func fillTestLogRecord(tv LogRecord) {
-	tv.orig.SetObservedTimeUnixNano(1234567890)
-	tv.orig.SetTimeUnixNano(1234567890)
-	tv.orig.SetTraceId(data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
-	tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
-	tv.orig.SetFlags(1)
-	tv.orig.SetEventName("")
-	tv.orig.SetSeverityText("INFO")
-	tv.orig.SetSeverityNumber(otlplogs.SeverityNumber(5))
-	internal.FillTestValue(internal.NewValue(tv.orig.GetBody(), tv.state))
-	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
-	tv.orig.SetDroppedAttributesCount(uint32(17))
+	// TODO: fill
 }

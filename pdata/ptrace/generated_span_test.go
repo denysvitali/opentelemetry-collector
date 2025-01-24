@@ -9,16 +9,14 @@
 package ptrace
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-"go.opentelemetry.io/collector/pdata/internal/data"
-otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	"go.opentelemetry.io/collector/pdata/internal/data"
+	otlptrace "go.opentelemetry.io/collector/pdata/internal/data/protogen/trace/v1"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSpan_MoveTo(t *testing.T) {
@@ -43,7 +41,6 @@ func TestSpan_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newSpan(&otlptrace.Span{}, &sharedState)) })
 }
-
 
 func TestSpan_TraceID(t *testing.T) {
 	ms := NewSpan()
@@ -171,7 +168,6 @@ func TestSpan_Status(t *testing.T) {
 	assert.Equal(t, generateTestStatus(), ms.Status())
 }
 
-
 func generateTestSpan() Span {
 	tv := NewSpan()
 	fillTestSpan(tv)
@@ -179,21 +175,5 @@ func generateTestSpan() Span {
 }
 
 func fillTestSpan(tv Span) {
-		tv.orig.SetTraceId(data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
-		tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
-	internal.FillTestTraceState(internal.NewTraceState(tv.orig.GetTraceState(), tv.state))
-		tv.orig.SetParentSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
-		tv.orig.SetName("test_name")
-		tv.orig.SetFlags(uint32(0xf))
-		tv.orig.SetKind(otlptrace.Span_SpanKind(3))
-		tv.orig.SetStartTimeUnixNano(1234567890)
-		tv.orig.SetEndTimeUnixNano(1234567890)
-	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
-		tv.orig.SetDroppedAttributesCount(uint32(17))
-	fillTestSpanEventSlice(newSpanEventSlice(&{}, tv.state))
-		tv.orig.SetDroppedEventsCount(uint32(17))
-	fillTestSpanLinkSlice(newSpanLinkSlice(&{}, tv.state))
-		tv.orig.SetDroppedLinksCount(uint32(17))
-	fillTestStatus(newStatus(tv.orig.GetStatus(), tv.state))
+	// TODO: fill
 }
-

@@ -27,8 +27,9 @@ func NewValue(orig *otlpcommon.AnyValue, state *State) Value {
 	return Value{orig: orig, state: state}
 }
 
-func FillTestValue(dest Value) {
+func FillTestValue(dest Value) *otlpcommon.AnyValue {
 	dest.orig.SetStringValue("v")
+	return dest.orig
 }
 
 func GenerateTestValue() Value {

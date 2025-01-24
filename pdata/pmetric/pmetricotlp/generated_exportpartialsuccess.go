@@ -9,8 +9,8 @@
 package pmetricotlp
 
 import (
+	"go.opentelemetry.io/collector/pdata/internal"
 	otlpcollectormetrics "go.opentelemetry.io/collector/pdata/internal/data/protogen/collector/metrics/v1"
-	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 )
 
 // ExportPartialSuccess represents the details of a partially successful export request.

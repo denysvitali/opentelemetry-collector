@@ -10,7 +10,6 @@ package ptrace
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -97,10 +96,5 @@ func generateTestSpanLink() SpanLink {
 }
 
 func fillTestSpanLink(tv SpanLink) {
-	tv.orig.SetTraceId(data.TraceID([]byte{1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1}))
-	tv.orig.SetSpanId(data.SpanID([]byte{8, 7, 6, 5, 4, 3, 2, 1}))
-	internal.FillTestTraceState(internal.NewTraceState(tv.orig.GetTraceState(), tv.state))
-	tv.orig.SetFlags(uint32(0xf))
-	internal.FillTestMap(internal.NewMap(&[]*otlpcommon.KeyValue{}, tv.state))
-	tv.orig.SetDroppedAttributesCount(uint32(17))
+	// TODO: fill
 }

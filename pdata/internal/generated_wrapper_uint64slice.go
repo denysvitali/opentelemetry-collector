@@ -8,14 +8,6 @@
 
 package internal
 
-import (
-	"go.opentelemetry.io/collector/pdata/internal"
-
-	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
-
-	otlpresource "go.opentelemetry.io/collector/pdata/internal/data/protogen/resource/v1"
-)
-
 type UInt64Slice struct {
 	orig  *[]uint64
 	state *State

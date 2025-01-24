@@ -10,10 +10,8 @@ package pprofile
 
 import (
 	"go.opentelemetry.io/collector/pdata/internal"
-	"go.opentelemetry.io/collector/pdata/internal/data"
 	otlpcommon "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
-	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-	"go.opentelemetry.io/collector/pdata/pcommon"
+	v1 "go.opentelemetry.io/collector/pdata/internal/data/protogen/common/v1"
 )
 
 // AttributeTableSliceAccessor is a slice accessor that is used to solve the problem

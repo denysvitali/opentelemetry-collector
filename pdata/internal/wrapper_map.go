@@ -32,7 +32,7 @@ func GenerateTestMap() Map {
 	return ms
 }
 
-func FillTestMap(dest Map) {
+func FillTestMap(dest Map) []*otlpcommon.KeyValue {
 	*dest.orig = nil
 	kv := otlpcommon.KeyValue{}
 	kv.SetKey("k")
@@ -40,4 +40,5 @@ func FillTestMap(dest Map) {
 	v.SetStringValue("v")
 	kv.SetValue(v)
 	*dest.orig = append(*dest.orig, &kv)
+	return *dest.orig
 }

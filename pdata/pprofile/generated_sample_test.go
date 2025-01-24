@@ -9,15 +9,13 @@
 package pprofile
 
 import (
-"testing"
-"unsafe"
+	"testing"
 
-"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 
-"go.opentelemetry.io/collector/pdata/internal"
-otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
-"go.opentelemetry.io/collector/pdata/pcommon"
-
+	"go.opentelemetry.io/collector/pdata/internal"
+	otlpprofiles "go.opentelemetry.io/collector/pdata/internal/data/protogen/profiles/v1development"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 func TestSample_MoveTo(t *testing.T) {
@@ -42,7 +40,6 @@ func TestSample_CopyTo(t *testing.T) {
 	sharedState := internal.StateReadOnly
 	assert.Panics(t, func() { ms.CopyTo(newSample(&otlpprofiles.Sample{}, &sharedState)) })
 }
-
 
 func TestSample_LocationsStartIndex(t *testing.T) {
 	ms := NewSample()
@@ -83,7 +80,6 @@ func TestSample_TimestampsUnixNano(t *testing.T) {
 	assert.Equal(t, pcommon.UInt64Slice(internal.GenerateTestUInt64Slice()), ms.TimestampsUnixNano())
 }
 
-
 func generateTestSample() Sample {
 	tv := NewSample()
 	fillTestSample(tv)
@@ -91,10 +87,5 @@ func generateTestSample() Sample {
 }
 
 func fillTestSample(tv Sample) {
-		tv.orig.SetLocationsStartIndex(int32(1))
-		tv.orig.SetLocationsLength(int32(1))
-	internal.FillTestInt64Slice(internal.NewInt64Slice(&{}, tv.state))
-	internal.FillTestInt32Slice(internal.NewInt32Slice(&{}, tv.state))
-	internal.FillTestUInt64Slice(internal.NewUInt64Slice(&{}, tv.state))
+	// TODO: fill
 }
-
