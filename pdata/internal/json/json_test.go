@@ -34,8 +34,7 @@ func BenchmarkEncoding(b *testing.B) {
 	exp := plogotlp.NewExportRequestFromLogs(logs)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		res, err := exp.MarshalJSON()
-		fmt.Printf("res=%s\n", res)
+		_, err := exp.MarshalJSON()
 		if err != nil {
 			b.Fatal(err)
 		}
